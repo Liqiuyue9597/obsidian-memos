@@ -54,15 +54,17 @@ interface MemoNote {
 }
 
 interface MemosSettings {
-  saveFolder: string;   // default: "00-Inbox"
-  useFixedTag: boolean; // default: false
-  fixedTag: string;     // default: ""
+  saveFolder: string;        // default: "00-Inbox"
+  useFixedTag: boolean;      // default: false
+  fixedTag: string;          // default: ""
+  captureNotePath: string;   // default: "Quick Capture.md"
 }
 
 const DEFAULT_SETTINGS: MemosSettings = {
   saveFolder: "00-Inbox",
   useFixedTag: false,
   fixedTag: "",
+  captureNotePath: "Quick Capture.md",
 };
 
 // =============================================================================
@@ -77,8 +79,9 @@ export default class MemosPlugin extends Plugin {
 
     this.registerView(VIEW_TYPE_MEMOS, (leaf) => new MemosView(leaf, this));
 
-    this.addRibbonIcon("pencil", "Open Memos capture", () => {
-      new CaptureModal(this.app, this).open();
+    // Ribbon icon → open Memos view (fullscreen on mobile)
+    this.addRibbonIcon("sticky-note", "Open Memos view", () => {
+      this.activateView();
     });
 
     this.addCommand({
@@ -97,6 +100,40 @@ export default class MemosPlugin extends Plugin {
       },
     });
 
+    this.addCommand({
+      id: "create-capture-note",
+      name: "Create quick capture entry note",
+      callback: async () => {
+        const path = this.settings.captureNotePath;
+        if (this.app.vault.getAbstractFileByPath(path)) {
+          new Notice(`Entry note already exists: ${path}`);
+          return;
+        }
+        const content = [
+          "This note is used by the Memos plugin as a quick capture entry point.",
+          "",
+          "**How to use on iOS:**",
+          "1. Long-press the Obsidian home screen widget",
+          "2. Tap Edit Widget",
+          '3. Set "Open a specific note" to this note',
+          "4. Tapping the widget will open Obsidian and automatically show the capture dialog",
+          "",
+          "> Do not delete this note if you want the widget shortcut to work.",
+        ].join("\n");
+        await this.app.vault.create(path, content);
+        new Notice(`Created entry note: ${path}`);
+      },
+    });
+
+    // Listen for file-open events → auto-trigger CaptureModal for the entry note
+    this.registerEvent(
+      this.app.workspace.on("file-open", (file) => {
+        if (file && file.path === this.settings.captureNotePath) {
+          new CaptureModal(this.app, this).open();
+        }
+      })
+    );
+
     this.addSettingTab(new MemosSettingTab(this.app, this));
 
     this.app.workspace.onLayoutReady(() => {
@@ -114,11 +151,9 @@ export default class MemosPlugin extends Plugin {
       this.app.workspace.revealLeaf(existing[0]);
       return;
     }
-    const leaf = this.app.workspace.getRightLeaf(false);
-    if (leaf) {
-      await leaf.setViewState({ type: VIEW_TYPE_MEMOS, active: true });
-      this.app.workspace.revealLeaf(leaf);
-    }
+    const leaf = this.app.workspace.getLeaf("tab");
+    await leaf.setViewState({ type: VIEW_TYPE_MEMOS, active: true });
+    this.app.workspace.revealLeaf(leaf);
   }
 
   async saveMemo(content: string, tags: string[]) {
@@ -648,5 +683,21 @@ class MemosSettingTab extends PluginSettingTab {
             })
         );
     }
+
+    new Setting(containerEl)
+      .setName("Quick capture entry note")
+      .setDesc(
+        "Path to the entry note that triggers the capture modal when opened. " +
+        "Use with the iOS widget's \"Open a specific note\" feature."
+      )
+      .addText((text) =>
+        text
+          .setPlaceholder("Quick Capture.md")
+          .setValue(this.plugin.settings.captureNotePath)
+          .onChange(async (value) => {
+            this.plugin.settings.captureNotePath = value.trim() || "Quick Capture.md";
+            await this.plugin.saveSettings();
+          })
+      );
   }
 }
