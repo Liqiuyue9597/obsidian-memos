@@ -393,13 +393,9 @@
   cursor: pointer;
 }
 
-/* Mobile */
+/* Mobile: let JS handle keyboard positioning via visualViewport */
 .is-mobile .modal:has(.memos-capture-modal) {
-  max-height: 70vh;
-}
-
-.is-mobile .memos-capture-modal {
-  min-height: 200px;
+  transition: bottom 0.1s ease, max-height 0.1s ease;
 }
 
 .is-mobile .memos-capture-textarea {

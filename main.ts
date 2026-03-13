@@ -584,34 +584,28 @@ class CaptureModal extends Modal {
       }
     });
 
-    // Mobile keyboard handling: resize modal when virtual keyboard appears
+    // Mobile keyboard handling: position modal directly above keyboard
     if (window.visualViewport) {
       this.viewportHandler = () => {
         const vv = window.visualViewport!;
-        const keyboardHeight = window.innerHeight - vv.height;
+        const keyboardHeight = window.innerHeight - vv.height - vv.offsetTop;
         const modalEl = contentEl.closest(".modal") as HTMLElement | null;
         if (modalEl) {
           if (keyboardHeight > 100) {
-            modalEl.style.maxHeight = `${vv.height - 20}px`;
-            modalEl.style.top = `${vv.offsetTop + 10}px`;
-            modalEl.style.bottom = "auto";
+            // Push modal above keyboard
+            modalEl.style.bottom = `${keyboardHeight}px`;
+            modalEl.style.top = "auto";
+            modalEl.style.maxHeight = `${vv.height - vv.offsetTop}px`;
           } else {
-            modalEl.style.maxHeight = "";
-            modalEl.style.top = "";
             modalEl.style.bottom = "";
+            modalEl.style.top = "";
+            modalEl.style.maxHeight = "";
           }
         }
       };
       window.visualViewport.addEventListener("resize", this.viewportHandler);
       window.visualViewport.addEventListener("scroll", this.viewportHandler);
     }
-
-    // Scroll focused element into view when keyboard appears
-    const scrollIntoFocus = (el: HTMLElement) => {
-      setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "center" }), 100);
-    };
-    textarea.addEventListener("focus", () => scrollIntoFocus(textarea));
-    tagInput.addEventListener("focus", () => scrollIntoFocus(tagInput));
 
     // Auto-focus
     setTimeout(() => textarea.focus(), 50);
