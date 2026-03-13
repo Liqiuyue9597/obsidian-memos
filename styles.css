@@ -314,7 +314,8 @@
   display: flex;
   flex-direction: column;
   padding: 4px;
-  overflow: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .memos-capture-textarea {

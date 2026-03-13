@@ -532,6 +532,8 @@ class CaptureModal extends Modal {
     this.plugin = plugin;
   }
 
+  private viewportHandler: (() => void) | null = null;
+
   onOpen() {
     const { contentEl } = this;
     contentEl.addClass("memos-capture-modal");
@@ -582,6 +584,35 @@ class CaptureModal extends Modal {
       }
     });
 
+    // Mobile keyboard handling: resize modal when virtual keyboard appears
+    if (window.visualViewport) {
+      this.viewportHandler = () => {
+        const vv = window.visualViewport!;
+        const keyboardHeight = window.innerHeight - vv.height;
+        const modalEl = contentEl.closest(".modal") as HTMLElement | null;
+        if (modalEl) {
+          if (keyboardHeight > 100) {
+            modalEl.style.maxHeight = `${vv.height - 20}px`;
+            modalEl.style.top = `${vv.offsetTop + 10}px`;
+            modalEl.style.bottom = "auto";
+          } else {
+            modalEl.style.maxHeight = "";
+            modalEl.style.top = "";
+            modalEl.style.bottom = "";
+          }
+        }
+      };
+      window.visualViewport.addEventListener("resize", this.viewportHandler);
+      window.visualViewport.addEventListener("scroll", this.viewportHandler);
+    }
+
+    // Scroll focused element into view when keyboard appears
+    const scrollIntoFocus = (el: HTMLElement) => {
+      setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "center" }), 100);
+    };
+    textarea.addEventListener("focus", () => scrollIntoFocus(textarea));
+    tagInput.addEventListener("focus", () => scrollIntoFocus(tagInput));
+
     // Auto-focus
     setTimeout(() => textarea.focus(), 50);
   }
@@ -618,6 +649,11 @@ class CaptureModal extends Modal {
   }
 
   onClose() {
+    if (this.viewportHandler && window.visualViewport) {
+      window.visualViewport.removeEventListener("resize", this.viewportHandler);
+      window.visualViewport.removeEventListener("scroll", this.viewportHandler);
+      this.viewportHandler = null;
+    }
     this.contentEl.empty();
   }
 }
