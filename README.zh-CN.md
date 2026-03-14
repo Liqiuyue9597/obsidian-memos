@@ -1,3 +1,11 @@
+<!-- README.zh-CN.md -->
+
+<div align="center">
+
+**🌐 其他语言版本:** [English](README.md) | [中文](README.zh-CN.md)
+
+</div>
+
 # obsidian-memos 🧠
 
 > **像 Flomo 一样快速记录** — 在 Obsidian 中即时捕获灵感，用卡片视图优雅回顾。
