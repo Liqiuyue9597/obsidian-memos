@@ -31,7 +31,7 @@ export function computeStats(memos: MemoNote[]): MemoStats {
   return { total, streak, today, thisMonth, dailyCounts };
 }
 
-function computeStreak(dailyCounts: Map<string, number>, todayLabel: string): number {
+export function computeStreak(dailyCounts: Map<string, number>, todayLabel: string): number {
   const todayDate = new Date(todayLabel + "T00:00:00");
   // Start from today if it has memos, otherwise from yesterday
   let startOffset = dailyCounts.has(todayLabel) ? 0 : 1;
@@ -54,7 +54,7 @@ function computeStreak(dailyCounts: Map<string, number>, todayLabel: string): nu
 /**
  * Get the level (0-4) for a given count.
  */
-function getLevel(count: number): number {
+export function getLevel(count: number): number {
   if (count === 0) return 0;
   if (count === 1) return 1;
   if (count <= 3) return 2;

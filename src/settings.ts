@@ -101,5 +101,17 @@ export class MemosSettingTab extends PluginSettingTab {
             })
         );
     }
+
+    new Setting(containerEl)
+      .setName("Show branding")
+      .setDesc('Display "Quick Memos for Obsidian" at the bottom of exported images.')
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.showBrandingInExport)
+          .onChange(async (value) => {
+            this.plugin.settings.showBrandingInExport = value;
+            await this.plugin.saveSettings();
+          })
+      );
   }
 }

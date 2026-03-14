@@ -16,6 +16,7 @@ interface CardTheme {
   metaBorderColor: string;
   timeColor: string;
   authorColor: string;
+  brandingColor: string;
 }
 
 const LIGHT_THEME: CardTheme = {
@@ -26,6 +27,7 @@ const LIGHT_THEME: CardTheme = {
   metaBorderColor: "rgba(0, 0, 0, 0.06)",
   timeColor: "#9ca3af",
   authorColor: "#9ca3af",
+  brandingColor: "#c9cdd4",
 };
 
 const DARK_THEME: CardTheme = {
@@ -36,6 +38,7 @@ const DARK_THEME: CardTheme = {
   metaBorderColor: "rgba(255, 255, 255, 0.08)",
   timeColor: "#6b7280",
   authorColor: "#6b7280",
+  brandingColor: "#4a4a4a",
 };
 
 /* ---------------------------------------------------------------------------
@@ -50,6 +53,8 @@ const BORDER_RADIUS = 16;
 const CONTENT_FONT_SIZE = 16;
 const CONTENT_LINE_HEIGHT = 1.8;
 const META_FONT_SIZE = 12;
+const BRANDING_FONT_SIZE = 10;
+const BRANDING_TEXT = "Quick Memos for Obsidian";
 const FONT_FAMILY =
   "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
 const PIXEL_RATIO = 2;
@@ -157,7 +162,7 @@ function wrapSegmentLines(
 /** Generate a PNG Blob by drawing directly onto a Canvas. */
 async function generateImage(
   memo: MemoNote,
-  options: { authorName?: string; isDarkMode: boolean }
+  options: { authorName?: string; isDarkMode: boolean; showBranding: boolean }
 ): Promise<Blob> {
   const theme = options.isDarkMode ? DARK_THEME : LIGHT_THEME;
   const scale = PIXEL_RATIO;
@@ -180,6 +185,8 @@ async function generateImage(
   const dividerHeight = 1;
   const metaPaddingTop = 14;
   const footerHeight = META_FONT_SIZE * 1.5;
+  const brandingOnSeparateLine = options.showBranding && !!options.authorName;
+  const brandingHeight = brandingOnSeparateLine ? BRANDING_FONT_SIZE + 16 : 0;
 
   const totalHeight =
     PADDING_TOP +
@@ -188,6 +195,7 @@ async function generateImage(
     dividerHeight +
     metaPaddingTop +
     footerHeight +
+    brandingHeight +
     PADDING_BOTTOM;
 
   // --- Draw pass ---
@@ -250,6 +258,21 @@ async function generateImage(
     ctx.fillStyle = theme.authorColor;
     const authorWidth = ctx.measureText(authorText).width;
     ctx.fillText(authorText, CARD_WIDTH - PADDING_X - authorWidth, footerY);
+  }
+
+  // --- Branding ---
+  if (options.showBranding) {
+    ctx.font = `300 ${BRANDING_FONT_SIZE}px ${FONT_FAMILY}`;
+    ctx.fillStyle = theme.brandingColor;
+    const brandingWidth = ctx.measureText(BRANDING_TEXT).width;
+    if (options.authorName) {
+      // Separate line below footer when author is shown
+      const brandingY = footerY + BRANDING_FONT_SIZE + 16;
+      ctx.fillText(BRANDING_TEXT, CARD_WIDTH - PADDING_X - brandingWidth, brandingY);
+    } else {
+      // Same line as time when no author
+      ctx.fillText(BRANDING_TEXT, CARD_WIDTH - PADDING_X - brandingWidth, footerY);
+    }
   }
 
   // --- Export to Blob ---
@@ -331,7 +354,7 @@ function renderExportContent(content: string, container: HTMLElement) {
  */
 export function buildExportCard(
   memo: MemoNote,
-  options: { authorName?: string; isDarkMode: boolean }
+  options: { authorName?: string; isDarkMode: boolean; showBranding: boolean }
 ): HTMLDivElement {
   const card = document.createElement("div");
   card.className = "memos-export-card";
@@ -370,6 +393,24 @@ export function buildExportCard(
   }
 
   meta.appendChild(footer);
+
+  // Branding
+  if (options.showBranding) {
+    if (options.authorName) {
+      // Separate line below footer when author is shown
+      const branding = document.createElement("div");
+      branding.className = "memos-export-branding";
+      branding.textContent = BRANDING_TEXT;
+      meta.appendChild(branding);
+    } else {
+      // Same line as time (inside footer row) when no author
+      const branding = document.createElement("span");
+      branding.className = "memos-export-branding";
+      branding.textContent = BRANDING_TEXT;
+      footer.appendChild(branding);
+    }
+  }
+
   card.appendChild(meta);
 
   return card;
@@ -401,11 +442,32 @@ export class ExportModal extends Modal {
     const authorName = this.plugin.settings.showAuthorInExport
       ? this.plugin.settings.authorName
       : undefined;
-    const cardEl = buildExportCard(this.memo, { authorName, isDarkMode });
+    const showBranding = this.plugin.settings.showBrandingInExport;
+    const cardEl = buildExportCard(this.memo, { authorName, isDarkMode, showBranding });
 
-    // Preview section
+    // Preview section — keep card at 440px, scale to fit on mobile
     const previewContainer = contentEl.createDiv("memos-export-preview");
-    previewContainer.appendChild(cardEl);
+    const cardWrapper = previewContainer.createDiv("memos-export-card-wrapper");
+    cardWrapper.appendChild(cardEl);
+
+    // After layout: scale card to fit container width if needed
+    // Use double-rAF to ensure layout is fully computed
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const containerWidth = previewContainer.clientWidth - 40; // minus padding (20px each side)
+        const cardWidth = 440;
+        if (containerWidth < cardWidth) {
+          const scale = containerWidth / cardWidth;
+          cardEl.style.transform = `scale(${scale})`;
+          cardEl.style.transformOrigin = "top left";
+          const cardHeight = cardEl.offsetHeight;
+          // Wrapper collapses to the scaled visual size
+          cardWrapper.style.width = `${cardWidth * scale}px`;
+          cardWrapper.style.height = `${cardHeight * scale}px`;
+          cardWrapper.style.overflow = "hidden";
+        }
+      });
+    });
 
     // Action buttons
     const btnRow = contentEl.createDiv("memos-export-btn-row");
@@ -434,7 +496,8 @@ export class ExportModal extends Modal {
     const authorName = this.plugin.settings.showAuthorInExport
       ? this.plugin.settings.authorName
       : undefined;
-    return { authorName, isDarkMode };
+    const showBranding = this.plugin.settings.showBrandingInExport;
+    return { authorName, isDarkMode, showBranding };
   }
 
   async handleSave(isDarkMode: boolean) {

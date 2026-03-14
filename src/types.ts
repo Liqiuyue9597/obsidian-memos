@@ -24,6 +24,7 @@ export interface MemosSettings {
   statsCollapsed: boolean;   // default: false
   authorName: string;        // default: ""
   showAuthorInExport: boolean; // default: false
+  showBrandingInExport: boolean; // default: true
 }
 
 export const DEFAULT_SETTINGS: MemosSettings = {
@@ -34,4 +35,5 @@ export const DEFAULT_SETTINGS: MemosSettings = {
   statsCollapsed: false,
   authorName: "",
   showAuthorInExport: false,
+  showBrandingInExport: true,
 };

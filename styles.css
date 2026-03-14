@@ -666,6 +666,11 @@
   border-radius: 8px;
   background: var(--background-modifier-border);
   padding: 20px;
+  box-sizing: border-box;
+}
+
+.memos-export-card-wrapper {
+  position: relative;
 }
 
 .memos-export-btn-row {
@@ -701,6 +706,7 @@
    ============================================================================= */
 
 .memos-export-card {
+  flex-shrink: 0;
   width: 440px;
   padding: 32px 28px 24px;
   border-radius: 16px;
@@ -790,4 +796,15 @@
 
 .memos-export-dark .memos-export-author {
   color: #6b7280;
+}
+
+.memos-export-branding {
+  font-size: 10px;
+  color: #c9cdd4;
+  font-weight: 300;
+  text-align: right;
+}
+
+.memos-export-dark .memos-export-branding {
+  color: #4a4a4a;
 }
