@@ -10,5 +10,5 @@
     "strict": true,
     "strictNullChecks": true
   },
-  "include": ["main.ts"]
+  "include": ["src/**/*.ts"]
 }

@@ -11,7 +11,7 @@ const prod = process.argv[2] === "production";
 
 const context = await esbuild.context({
   banner: { js: banner },
-  entryPoints: ["main.ts"],
+  entryPoints: ["src/main.ts"],
   bundle: true,
   external: [
     "obsidian",
