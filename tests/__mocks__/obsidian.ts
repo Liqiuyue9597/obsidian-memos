@@ -14,3 +14,7 @@ export class TFolder {
 export function normalizePath(path: string): string {
   return path.replace(/\\/g, "/").replace(/\/+/g, "/");
 }
+
+export function setIcon(_el: unknown, _icon: string): void {
+  // no-op for testing
+}
