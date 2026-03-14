@@ -8,11 +8,20 @@ export interface MemoNote {
   dateLabel: string; // "YYYY-MM-DD" for grouping
 }
 
+export interface MemoStats {
+  total: number;                    // total memo count
+  streak: number;                   // consecutive days with memos
+  today: number;                    // memos created today
+  thisMonth: number;                // memos created this month
+  dailyCounts: Map<string, number>; // dateLabel → count
+}
+
 export interface MemosSettings {
   saveFolder: string;        // default: "00-Inbox"
   useFixedTag: boolean;      // default: false
   fixedTag: string;          // default: ""
   captureNotePath: string;   // default: "Quick Capture.md"
+  statsCollapsed: boolean;   // default: false
 }
 
 export const DEFAULT_SETTINGS: MemosSettings = {
@@ -20,4 +29,5 @@ export const DEFAULT_SETTINGS: MemosSettings = {
   useFixedTag: false,
   fixedTag: "",
   captureNotePath: "Quick Capture.md",
+  statsCollapsed: false,
 };

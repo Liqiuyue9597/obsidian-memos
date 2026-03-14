@@ -11,12 +11,14 @@ import { VIEW_TYPE_MEMOS, INLINE_TAG_RE } from "./constants";
 import { MemoNote } from "./types";
 import { extractInlineTags } from "./utils";
 import { parseMemoContent } from "./memo-parser";
+import { computeStats, renderStatsSection } from "./stats";
 import type MemosPlugin from "./plugin";
 import { CaptureModal } from "./capture-modal";
 
 export class MemosView extends ItemView {
   plugin: MemosPlugin;
   activeTag: string | null = null;
+  activeDateFilter: string | null = null;
   memos: MemoNote[] = [];
   highlightedCardEl: HTMLElement | null = null;
 
@@ -86,6 +88,14 @@ export class MemosView extends ItemView {
     const toolbar = this.contentEl.createDiv("memos-toolbar");
     this.renderToolbar(toolbar);
 
+    // Stats section (heatmap + numbers) — always shows global data
+    const statsContainer = this.contentEl.createDiv();
+    const stats = computeStats(this.memos);
+    renderStatsSection(statsContainer, stats, this.plugin.settings.statsCollapsed, {
+      onToggle: () => this.handleStatsToggle(),
+      onDateClick: (date) => this.handleDateFilter(date),
+    });
+
     const cardsContainer = this.contentEl.createDiv("memos-cards-container");
     this.renderCards(cardsContainer);
   }
@@ -145,7 +155,9 @@ export class MemosView extends ItemView {
     const left = el.createDiv("memos-toolbar-left");
 
     const count = this.memos.filter(
-      (m) => !this.activeTag || m.tags.includes(this.activeTag)
+      (m) =>
+        (!this.activeTag || m.tags.includes(this.activeTag)) &&
+        (!this.activeDateFilter || m.dateLabel === this.activeDateFilter)
     ).length;
     left.createSpan({
       cls: "memos-count",
@@ -158,6 +170,16 @@ export class MemosView extends ItemView {
       const x = pill.createSpan({ cls: "memos-filter-clear", text: " ×" });
       x.addEventListener("click", () => {
         this.activeTag = null;
+        this.refresh();
+      });
+    }
+
+    if (this.activeDateFilter) {
+      const pill = left.createSpan({ cls: "memos-active-filter-pill memos-date-filter-pill" });
+      pill.setText(this.activeDateFilter);
+      const x = pill.createSpan({ cls: "memos-filter-clear", text: " ×" });
+      x.addEventListener("click", () => {
+        this.activeDateFilter = null;
         this.refresh();
       });
     }
@@ -184,9 +206,13 @@ export class MemosView extends ItemView {
   }
 
   renderCards(el: HTMLElement) {
-    const filtered = this.activeTag
-      ? this.memos.filter((m) => m.tags.includes(this.activeTag!))
-      : this.memos;
+    let filtered = this.memos;
+    if (this.activeTag) {
+      filtered = filtered.filter((m) => m.tags.includes(this.activeTag!));
+    }
+    if (this.activeDateFilter) {
+      filtered = filtered.filter((m) => m.dateLabel === this.activeDateFilter);
+    }
 
     if (filtered.length === 0) {
       const empty = el.createDiv("memos-empty");
@@ -317,6 +343,17 @@ export class MemosView extends ItemView {
       this.highlightedCardEl = cardEl;
       cardEl.scrollIntoView({ behavior: "smooth", block: "center" });
     }
+  }
+
+  handleDateFilter(date: string) {
+    this.activeDateFilter = this.activeDateFilter === date ? null : date;
+    this.refresh();
+  }
+
+  handleStatsToggle() {
+    this.plugin.settings.statsCollapsed = !this.plugin.settings.statsCollapsed;
+    this.plugin.saveSettings();
+    this.refresh();
   }
 
   openMemo(file: TFile) {

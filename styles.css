@@ -401,3 +401,203 @@
 .is-mobile .memos-capture-textarea {
   min-height: 60px;
 }
+
+/* =============================================================================
+   Stats Section (Heatmap + Numbers)
+   ============================================================================= */
+
+.memos-stats-section {
+  margin: 8px 12px 0;
+  padding: 10px 14px;
+  background-color: var(--background-primary-alt);
+  border-radius: 10px;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 0 0 1px rgba(0, 0, 0, 0.03);
+  flex-shrink: 0;
+}
+
+.theme-dark .memos-stats-section {
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+/* Header row with collapse toggle */
+.memos-stats-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.memos-stats-chevron {
+  display: flex;
+  align-items: center;
+  color: var(--text-muted);
+}
+
+.memos-stats-chevron svg {
+  width: 14px;
+  height: 14px;
+}
+
+.memos-stats-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-faint);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Collapsible content area */
+.memos-stats-content {
+  max-height: 500px;
+  overflow: hidden;
+  transition: max-height 0.25s ease, opacity 0.25s ease, margin-top 0.25s ease;
+  opacity: 1;
+  margin-top: 10px;
+}
+
+.memos-stats-content.memos-stats-collapsed {
+  max-height: 0;
+  opacity: 0;
+  margin-top: 0;
+}
+
+/* =============================================================================
+   Heatmap Grid
+   ============================================================================= */
+
+.memos-heatmap {
+  display: grid;
+  grid-template-rows: repeat(7, 1fr);
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 3px;
+  padding-bottom: 4px;
+}
+
+.memos-heatmap-cell {
+  aspect-ratio: 1;
+  border-radius: 2px;
+  position: relative;
+  min-width: 0;
+}
+
+.memos-heatmap-empty {
+  background: transparent;
+}
+
+/* Heatmap color levels — light theme */
+.memos-heatmap-level-0 {
+  background-color: var(--background-modifier-border);
+}
+
+.memos-heatmap-level-1 {
+  background-color: var(--interactive-accent);
+  opacity: 0.3;
+}
+
+.memos-heatmap-level-2 {
+  background-color: var(--interactive-accent);
+  opacity: 0.5;
+}
+
+.memos-heatmap-level-3 {
+  background-color: var(--interactive-accent);
+  opacity: 0.75;
+}
+
+.memos-heatmap-level-4 {
+  background-color: var(--interactive-accent);
+  opacity: 1;
+}
+
+/* Clickable cells */
+.memos-heatmap-cell[data-date] {
+  cursor: default;
+}
+
+.memos-heatmap-cell.memos-heatmap-level-1,
+.memos-heatmap-cell.memos-heatmap-level-2,
+.memos-heatmap-cell.memos-heatmap-level-3,
+.memos-heatmap-cell.memos-heatmap-level-4 {
+  cursor: pointer;
+}
+
+/* Tooltip via aria-label */
+.memos-heatmap-cell[aria-label] {
+  position: relative;
+}
+
+.memos-heatmap-cell[aria-label]:hover::after {
+  content: attr(aria-label);
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: var(--background-primary);
+  color: var(--text-normal);
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  z-index: 100;
+  pointer-events: none;
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.12),
+    0 0 0 1px rgba(0, 0, 0, 0.05);
+}
+
+.theme-dark .memos-heatmap-cell[aria-label]:hover::after {
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+/* =============================================================================
+   Stats Numbers
+   ============================================================================= */
+
+.memos-stats-numbers {
+  display: flex;
+  gap: 0;
+  margin-top: 8px;
+}
+
+.memos-stat-card {
+  flex: 1;
+  text-align: center;
+  padding: 4px 2px;
+}
+
+.memos-stat-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-normal);
+  line-height: 1.2;
+}
+
+.memos-stat-unit {
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.memos-stat-label {
+  font-size: 10px;
+  color: var(--text-faint);
+  letter-spacing: 0.02em;
+  font-weight: 400;
+  margin-top: 1px;
+}
+
+/* =============================================================================
+   Date Filter Pill
+   ============================================================================= */
+
+.memos-date-filter-pill {
+  /* Inherits from .memos-active-filter-pill — no extra styles needed */
+}
