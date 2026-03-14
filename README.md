@@ -23,7 +23,7 @@ Replace flomo with your own vault — capture fleeting thoughts instantly, brows
 ### Manual (Developer Build)
 
 ```bash
-git clone https://github.com/elissali/obsidian-memos
+git clone https://github.com/Liqiuyue9597/obsidian-memos
 cd obsidian-memos
 npm install
 npm run build
@@ -35,7 +35,7 @@ Then symlink or copy the folder into your vault's plugins directory:
 ln -s /path/to/obsidian-memos /path/to/vault/.obsidian/plugins/obsidian-memos
 ```
 
-In Obsidian: **Settings → Community plugins → enable "Memos"**
+In Obsidian: **Settings → Community plugins ⁒ enable "Memos"**
 
 ---
 
@@ -43,9 +43,9 @@ In Obsidian: **Settings → Community plugins → enable "Memos"**
 
 | Action | How |
 |---|---|
-| Open capture modal | Click pencil icon in ribbon, or Cmd/Ctrl+P → "Memos: Quick capture" |
+| Open capture modal | Click pencil icon in ribbon, or Cmd/Ctrl+P — "Memos: Quick capture" |
 | Save memo | Ctrl+Enter or click Save button |
-| Open Memos view | Cmd/Ctrl+P → "Memos: Open Memos view" |
+| Open Memos view | Cmd/Ctrl+P — "Memos: Open Memos view" |
 | Filter by tag | Click any tag pill or inline `#tag` |
 | Clear filter | Click × on the active filter pill in toolbar |
 | Random review | Click dice icon in toolbar |
