@@ -395,8 +395,7 @@
 
 /* Mobile: push modal higher so keyboard doesn't cover it */
 .is-mobile .modal:has(.memos-capture-modal) {
-  top: 10%;
-  bottom: auto;
+  transform: translateY(-20%);
 }
 
 /* Mobile: top bar layout — tag input + save above textarea to avoid keyboard occlusion */
