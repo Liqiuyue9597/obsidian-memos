@@ -63,22 +63,17 @@ export class CaptureModal extends Modal {
       }
     });
 
-    // Mobile keyboard handling: position modal directly above keyboard
-    if (window.visualViewport) {
+    // Mobile keyboard handling: resize bottom-sheet to fit above keyboard
+    if (window.visualViewport && document.body.classList.contains("is-mobile")) {
       this.viewportHandler = () => {
         const vv = window.visualViewport!;
         const keyboardHeight = window.innerHeight - vv.height - vv.offsetTop;
         const modalEl = contentEl.closest(".modal") as HTMLElement | null;
         if (modalEl) {
           if (keyboardHeight > 100) {
-            // Push modal above keyboard
-            modalEl.style.bottom = `${keyboardHeight}px`;
-            modalEl.style.top = "auto";
-            modalEl.style.maxHeight = `${vv.height - vv.offsetTop}px`;
+            modalEl.style.height = `${vv.height}px`;
           } else {
-            modalEl.style.bottom = "";
-            modalEl.style.top = "";
-            modalEl.style.maxHeight = "";
+            modalEl.style.height = "";
           }
         }
       };
