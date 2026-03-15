@@ -400,9 +400,10 @@
   top: auto;
   left: 0;
   right: 0;
-  max-height: 70vh;
+  max-height: 60vh;
   border-radius: 16px 16px 0 0;
-  transition: height 0.15s ease;
+  overflow: hidden;
+  transition: bottom 0.15s ease, height 0.15s ease;
 }
 
 .is-mobile .memos-capture-modal {
