@@ -393,25 +393,23 @@
   cursor: pointer;
 }
 
-/* Mobile: compact capture modal that works with on-screen keyboard */
-.is-mobile .memos-capture-modal {
+/* Mobile: top bar layout — tag input + save above textarea to avoid keyboard occlusion */
+.memos-capture-top-bar {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 8px;
 }
 
-.is-mobile .memos-capture-textarea {
-  min-height: 80px;
-  max-height: 30vh;
+.memos-capture-top-bar .memos-capture-tag-row {
+  flex: 1;
+  min-width: 0;
 }
 
-.is-mobile .memos-capture-bottom-bar {
+.memos-capture-top-bar .memos-capture-save-btn {
+  width: auto;
+  padding: 6px 18px;
   flex-shrink: 0;
-}
-
-.is-mobile .memos-capture-save-btn {
-  padding: 10px;
-  font-size: 15px;
 }
 
 /* =============================================================================

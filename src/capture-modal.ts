@@ -11,13 +11,41 @@ export class CaptureModal extends Modal {
     this.plugin = plugin;
   }
 
-  private viewportHandler: (() => void) | null = null;
-
   onOpen() {
     const { contentEl } = this;
     contentEl.addClass("memos-capture-modal");
 
-    // Textarea fills available space
+    const isMobile = document.body.classList.contains("is-mobile");
+
+    // On mobile: put tag input + save button ABOVE textarea so keyboard never covers them
+    let topBar: HTMLElement | null = null;
+    let tagInput: HTMLInputElement;
+
+    if (isMobile) {
+      topBar = contentEl.createDiv("memos-capture-top-bar");
+
+      // Tag input (compact, inline)
+      const tagRow = topBar.createDiv("memos-capture-tag-row");
+      tagRow.createSpan({ cls: "memos-capture-tag-label", text: "#" });
+      tagInput = tagRow.createEl("input", {
+        cls: "memos-capture-tag-input",
+        attr: {
+          type: "text",
+          placeholder: "tags",
+        },
+      }) as HTMLInputElement;
+
+      // Save button (compact, right-aligned)
+      const saveBtn = topBar.createEl("button", {
+        cls: "memos-capture-save-btn mod-cta",
+        text: "Save",
+      });
+      saveBtn.addEventListener("click", () => {
+        this.handleSave(textarea.value, tagInput.value);
+      });
+    }
+
+    // Textarea
     const textarea = contentEl.createEl("textarea", {
       cls: "memos-capture-textarea",
       attr: {
@@ -25,56 +53,49 @@ export class CaptureModal extends Modal {
       },
     });
 
-    // Bottom toolbar: tag input + save button on one row, always visible above keyboard
-    const bottomBar = contentEl.createDiv("memos-capture-bottom-bar");
+    // Desktop: bottom bar with tag input + save button (original layout)
+    if (!isMobile) {
+      const bottomBar = contentEl.createDiv("memos-capture-bottom-bar");
 
-    // Tag input row
-    const tagRow = bottomBar.createDiv("memos-capture-tag-row");
-    tagRow.createSpan({ cls: "memos-capture-tag-label", text: "#" });
-    const tagInput = tagRow.createEl("input", {
-      cls: "memos-capture-tag-input",
-      attr: {
-        type: "text",
-        placeholder: "tags, separated by spaces or commas",
-      },
-    });
+      const tagRow = bottomBar.createDiv("memos-capture-tag-row");
+      tagRow.createSpan({ cls: "memos-capture-tag-label", text: "#" });
+      tagInput = tagRow.createEl("input", {
+        cls: "memos-capture-tag-input",
+        attr: {
+          type: "text",
+          placeholder: "tags, separated by spaces or commas",
+        },
+      }) as HTMLInputElement;
 
-    // Fixed tag hint
-    if (this.plugin.settings.useFixedTag && this.plugin.settings.fixedTag) {
-      const hint = bottomBar.createDiv({ cls: "memos-capture-hint" });
-      hint.setText(`Fixed tag: #${this.plugin.settings.fixedTag.replace(/^#+/, "")}`);
+      if (this.plugin.settings.useFixedTag && this.plugin.settings.fixedTag) {
+        const hint = bottomBar.createDiv({ cls: "memos-capture-hint" });
+        hint.setText(`Fixed tag: #${this.plugin.settings.fixedTag.replace(/^#+/, "")}`);
+      }
+
+      const saveBtn = bottomBar.createEl("button", {
+        cls: "memos-capture-save-btn mod-cta",
+        text: "Save",
+      });
+      saveBtn.addEventListener("click", () => {
+        this.handleSave(textarea.value, tagInput!.value);
+      });
+    } else {
+      // Mobile: show fixed tag hint below top bar
+      if (this.plugin.settings.useFixedTag && this.plugin.settings.fixedTag) {
+        const hint = contentEl.createDiv({ cls: "memos-capture-hint" });
+        hint.setText(`Fixed tag: #${this.plugin.settings.fixedTag.replace(/^#+/, "")}`);
+        // Move hint before textarea
+        contentEl.insertBefore(hint, textarea);
+      }
     }
-
-    // Save button
-    const saveBtn = bottomBar.createEl("button", {
-      cls: "memos-capture-save-btn mod-cta",
-      text: "Save",
-    });
-
-    saveBtn.addEventListener("click", () => {
-      this.handleSave(textarea.value, tagInput.value);
-    });
 
     // Keyboard shortcut
     contentEl.addEventListener("keydown", (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
         e.preventDefault();
-        this.handleSave(textarea.value, tagInput.value);
+        this.handleSave(textarea.value, tagInput!.value);
       }
     });
-
-    // Mobile: when keyboard opens, scroll save button into view
-    if (document.body.classList.contains("is-mobile") && window.visualViewport) {
-      this.viewportHandler = () => {
-        const vv = window.visualViewport!;
-        const keyboardHeight = window.innerHeight - vv.height - vv.offsetTop;
-        if (keyboardHeight > 100) {
-          // Keyboard is open — scroll the save button into the visible area
-          saveBtn.scrollIntoView({ behavior: "smooth", block: "nearest" });
-        }
-      };
-      window.visualViewport.addEventListener("resize", this.viewportHandler);
-    }
 
     // Auto-focus
     setTimeout(() => textarea.focus(), 50);
@@ -87,12 +108,8 @@ export class CaptureModal extends Modal {
       return;
     }
 
-    // Parse tags from tag input field
     const explicitTags = parseTags(tagInputValue);
-
-    // Also extract inline #tags from content
     const inlineTags = extractInlineTags(trimmed);
-
     const allTags = Array.from(new Set([...explicitTags, ...inlineTags]));
 
     try {
@@ -105,10 +122,6 @@ export class CaptureModal extends Modal {
   }
 
   onClose() {
-    if (this.viewportHandler && window.visualViewport) {
-      window.visualViewport.removeEventListener("resize", this.viewportHandler);
-      this.viewportHandler = null;
-    }
     this.contentEl.empty();
   }
 }
