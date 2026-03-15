@@ -467,11 +467,11 @@
 }
 
 .memos-capture-view-container .memos-capture-textarea {
-  flex: 1;
   border: none;
   border-radius: 0;
   padding: 12px;
-  min-height: 150px;
+  height: 40vh;
+  flex-shrink: 0;
   font-size: 16px;
   line-height: 1.7;
 }
