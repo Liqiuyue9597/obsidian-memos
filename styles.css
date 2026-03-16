@@ -614,7 +614,7 @@
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
 }
 
-/* Mobile: wider card */
+/* Mobile: wider card, close button flows with content */
 .is-mobile .memos-capture-card {
   max-width: 100%;
   border-radius: 14px;
@@ -622,6 +622,17 @@
 
 .is-mobile .memos-capture-card-container {
   padding: 16px 10px;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+
+.is-mobile .memos-capture-close {
+  position: relative;
+  top: auto;
+  left: auto;
+  margin-bottom: 8px;
+  align-self: flex-start;
 }
 
 /* =============================================================================
