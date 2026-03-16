@@ -287,39 +287,92 @@ export class MemosView extends ItemView {
     });
   }
 
+  private static readonly IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "gif", "webp", "svg"];
+  private static readonly EMBED_RE = /!\[\[(.+?)\]\]/g;
+
   /** Build card content using safe DOM operations instead of innerHTML. */
   renderContentDOM(content: string, container: HTMLElement) {
     const lines = content.split("\n");
-    const re = new RegExp(INLINE_TAG_RE.source, INLINE_TAG_RE.flags);
 
     for (let i = 0; i < lines.length; i++) {
       if (i > 0) container.createEl("br");
 
       const line = lines[i];
-      let lastIndex = 0;
-      let match: RegExpExecArray | null;
-      re.lastIndex = 0;
+      // Split line into text segments and embed segments
+      const embedRe = new RegExp(MemosView.EMBED_RE.source, MemosView.EMBED_RE.flags);
+      let lastIdx = 0;
+      let embedMatch: RegExpExecArray | null;
 
-      while ((match = re.exec(line)) !== null) {
-        // Text before the tag
-        if (match.index > lastIndex) {
-          container.appendText(line.slice(lastIndex, match.index));
+      while ((embedMatch = embedRe.exec(line)) !== null) {
+        // Render text before the embed (with inline tag support)
+        if (embedMatch.index > lastIdx) {
+          this.renderTextSegment(line.slice(lastIdx, embedMatch.index), container);
         }
-        // Clickable tag span
-        const tagName = match[1];
-        const tagSpan = container.createSpan({ cls: "memos-inline-tag", text: `#${tagName}` });
-        tagSpan.dataset["tag"] = tagName;
-        tagSpan.addEventListener("click", (e) => {
-          e.stopPropagation();
-          this.handleTagClick(tagName);
-        });
-        lastIndex = re.lastIndex;
+        // Render the embed
+        const embedName = embedMatch[1];
+        this.renderEmbed(embedName, container);
+        lastIdx = embedRe.lastIndex;
       }
-      // Remaining text after last tag
-      if (lastIndex < line.length) {
-        container.appendText(line.slice(lastIndex));
+      // Remaining text after last embed
+      if (lastIdx < line.length) {
+        this.renderTextSegment(line.slice(lastIdx), container);
       }
     }
+  }
+
+  /** Render a text segment with inline #tag support. */
+  private renderTextSegment(text: string, container: HTMLElement) {
+    const re = new RegExp(INLINE_TAG_RE.source, INLINE_TAG_RE.flags);
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+
+    while ((match = re.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        container.appendText(text.slice(lastIndex, match.index));
+      }
+      const tagName = match[1];
+      const tagSpan = container.createSpan({ cls: "memos-inline-tag", text: `#${tagName}` });
+      tagSpan.dataset["tag"] = tagName;
+      tagSpan.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.handleTagClick(tagName);
+      });
+      lastIndex = re.lastIndex;
+    }
+    if (lastIndex < text.length) {
+      container.appendText(text.slice(lastIndex));
+    }
+  }
+
+  /** Render a ![[embed]] — show image if it's an image file, otherwise plain text. */
+  private renderEmbed(name: string, container: HTMLElement) {
+    const ext = name.split(".").pop()?.toLowerCase() ?? "";
+    if (!MemosView.IMAGE_EXTENSIONS.includes(ext)) {
+      // Non-image embed: render as plain text
+      container.appendText(`![[${name}]]`);
+      return;
+    }
+
+    // Try to find the file in vault
+    const file = this.app.metadataCache.getFirstLinkpathDest(name, "");
+    if (!file) {
+      // File not found: render as plain text
+      container.appendText(`![[${name}]]`);
+      return;
+    }
+
+    const resourcePath = this.app.vault.getResourcePath(file);
+    const img = container.createEl("img", {
+      cls: "memos-card-image",
+      attr: {
+        src: resourcePath,
+        alt: name,
+        loading: "lazy",
+      },
+    });
+    img.addEventListener("click", (e) => {
+      e.stopPropagation();
+    });
   }
 
   handleTagClick(tag: string | null) {
@@ -370,7 +423,17 @@ export class MemosView extends ItemView {
   }
 
   openMemo(file: TFile) {
-    const leaf = this.app.workspace.getLeaf(false);
-    leaf.openFile(file);
+    // Check if the file is already open in a markdown tab
+    const existing = this.app.workspace.getLeavesOfType("markdown").find((leaf) => {
+      const viewFile = (leaf.view as { file?: TFile }).file;
+      return viewFile?.path === file.path;
+    });
+
+    if (existing) {
+      this.app.workspace.revealLeaf(existing);
+    } else {
+      const leaf = this.app.workspace.getLeaf("tab");
+      leaf.openFile(file);
+    }
   }
 }

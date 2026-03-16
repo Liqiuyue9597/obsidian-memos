@@ -1,5 +1,6 @@
 import {
   Notice,
+  Platform,
   Plugin,
   TFile,
   normalizePath,
@@ -78,7 +79,9 @@ export default class MemosPlugin extends Plugin {
     this.addSettingTab(new MemosSettingTab(this.app, this));
 
     this.app.workspace.onLayoutReady(() => {
-      this.activateView();
+      if (Platform.isMobile) {
+        this.activateView();
+      }
     });
   }
 

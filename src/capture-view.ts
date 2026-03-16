@@ -1,8 +1,35 @@
-import { ItemView, WorkspaceLeaf, Notice, setIcon } from "obsidian";
+import { ItemView, WorkspaceLeaf, Notice, setIcon, FuzzySuggestModal, TFile, App } from "obsidian";
 
 import { VIEW_TYPE_CAPTURE } from "./constants";
 import { extractInlineTags, parseTags } from "./utils";
 import type MemosPlugin from "./plugin";
+
+const IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "gif", "webp", "svg"];
+
+/** Modal that lets the user pick an image file from the vault. */
+export class ImageSuggestModal extends FuzzySuggestModal<TFile> {
+  private onChoose: (file: TFile) => void;
+
+  constructor(app: App, onChoose: (file: TFile) => void) {
+    super(app);
+    this.onChoose = onChoose;
+    this.setPlaceholder("搜索图片文件…");
+  }
+
+  getItems(): TFile[] {
+    return this.app.vault.getFiles().filter((f) =>
+      IMAGE_EXTENSIONS.includes(f.extension.toLowerCase())
+    );
+  }
+
+  getItemText(file: TFile): string {
+    return file.path;
+  }
+
+  onChooseItem(file: TFile): void {
+    this.onChoose(file);
+  }
+}
 
 export class CaptureItemView extends ItemView {
   plugin: MemosPlugin;
@@ -70,6 +97,19 @@ export class CaptureItemView extends ItemView {
       );
     }
 
+    // ── Action row (image button) ──
+    const actionRow = container.createDiv("memos-capture-action-row");
+    const imageBtn = actionRow.createEl("button", {
+      cls: "memos-capture-action-btn clickable-icon",
+      attr: { "aria-label": "插入图片" },
+    });
+    setIcon(imageBtn, "image");
+    imageBtn.addEventListener("click", () => {
+      new ImageSuggestModal(this.app, (file) => {
+        this.insertAtCursor(`![[${file.name}]]`);
+      }).open();
+    });
+
     // ── Textarea ──
     this.textarea = container.createEl("textarea", {
       cls: "memos-capture-textarea",
@@ -92,6 +132,20 @@ export class CaptureItemView extends ItemView {
 
   async onClose() {
     this.contentEl.empty();
+  }
+
+  /** Insert text at the current cursor position in the textarea. */
+  private insertAtCursor(text: string) {
+    const ta = this.textarea;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const before = ta.value.slice(0, start);
+    const after = ta.value.slice(end);
+    ta.value = before + text + after;
+    const newPos = start + text.length;
+    ta.selectionStart = newPos;
+    ta.selectionEnd = newPos;
+    ta.focus();
   }
 
   private async handleSave() {
