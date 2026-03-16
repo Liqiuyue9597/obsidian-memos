@@ -334,6 +334,8 @@
   background: rgba(0, 0, 0, 0.03);
   backdrop-filter: blur(28px) saturate(1.2);
   -webkit-backdrop-filter: blur(28px) saturate(1.2);
+  /* Prevent keyboard from shrinking the layout on mobile */
+  min-height: fit-content;
 }
 
 .theme-dark .memos-capture-card-container {
@@ -411,6 +413,7 @@
 .memos-capture-card-textarea {
   width: 100%;
   min-height: 180px;
+  height: 180px;
   border: none !important;
   background: transparent !important;
   box-shadow: none !important;
@@ -618,6 +621,7 @@
 .is-mobile .memos-capture-card {
   max-width: 100%;
   border-radius: 14px;
+  flex-shrink: 0;
 }
 
 .is-mobile .memos-capture-card-container {
@@ -625,6 +629,9 @@
   flex-direction: column;
   align-items: stretch;
   justify-content: flex-start;
+  /* Prevent keyboard from compressing the card content */
+  height: auto;
+  min-height: 100%;
 }
 
 .is-mobile .memos-capture-close {
@@ -633,6 +640,16 @@
   left: auto;
   margin-bottom: 8px;
   align-self: flex-start;
+  flex-shrink: 0;
+}
+
+.is-mobile .memos-capture-card-textarea-wrap {
+  flex-shrink: 0;
+}
+
+.is-mobile .memos-capture-card-textarea {
+  min-height: 180px;
+  height: auto;
 }
 
 /* =============================================================================
