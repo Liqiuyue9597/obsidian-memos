@@ -31,6 +31,39 @@ export class ImageSuggestModal extends FuzzySuggestModal<TFile> {
   }
 }
 
+/** Modal that lets the user pick a note to insert as [[wikilink]]. */
+export class NoteSuggestModal extends FuzzySuggestModal<TFile> {
+  private onChoose: (file: TFile) => void;
+  private onDismiss: (() => void) | undefined;
+
+  constructor(app: App, onChoose: (file: TFile) => void, onDismiss?: () => void) {
+    super(app);
+    this.onChoose = onChoose;
+    this.onDismiss = onDismiss;
+    this.setPlaceholder("搜索笔记…");
+  }
+
+  getItems(): TFile[] {
+    return this.app.vault.getMarkdownFiles();
+  }
+
+  getItemText(file: TFile): string {
+    return file.basename;
+  }
+
+  onChooseItem(file: TFile): void {
+    this.onChoose(file);
+  }
+
+  onClose(): void {
+    // Called when modal is dismissed (Escape or click outside) without choosing
+    // We use a short delay so onChooseItem fires first if the user made a selection
+    setTimeout(() => {
+      this.onDismiss?.();
+    }, 50);
+  }
+}
+
 export class CaptureItemView extends ItemView {
   plugin: MemosPlugin;
   private textarea!: HTMLTextAreaElement;
@@ -38,6 +71,12 @@ export class CaptureItemView extends ItemView {
   private tags: string[] = [];
   /** Container element for tag pills. */
   private tagsContainer!: HTMLDivElement;
+  /** Selected mood (emoji string or empty). */
+  private selectedMood = "";
+  /** Selected source (string or empty). */
+  private selectedSource = "";
+  /** Prevents multiple wikilink modals from opening simultaneously. */
+  private wikilinkModalOpen = false;
 
   constructor(leaf: WorkspaceLeaf, plugin: MemosPlugin) {
     super(leaf);
@@ -82,10 +121,49 @@ export class CaptureItemView extends ItemView {
       attr: { placeholder: "What's on your mind?" },
     });
 
+    // ── [[ wikilink trigger: detect "[[" input and open note suggest modal ──
+    this.textarea.addEventListener("input", () => {
+      this.handleWikilinkTrigger();
+    });
+
     // ── Tags area ──
     this.tags = [];
     this.tagsContainer = card.createDiv("memos-capture-card-tags");
     this.renderTags();
+
+    // ── Mood picker (optional) ──
+    if (this.plugin.settings.enableMood) {
+      const moodRow = card.createDiv("memos-capture-meta-row");
+      moodRow.createSpan({ cls: "memos-capture-meta-label", text: "Mood" });
+      const moodPills = moodRow.createDiv("memos-capture-meta-pills");
+      for (const emoji of this.plugin.settings.moodOptions) {
+        const pill = moodPills.createSpan({ cls: "memos-capture-meta-pill", text: emoji });
+        pill.addEventListener("click", () => {
+          this.selectedMood = this.selectedMood === emoji ? "" : emoji;
+          moodPills.querySelectorAll(".memos-capture-meta-pill").forEach((el) => {
+            el.removeClass("is-active");
+          });
+          if (this.selectedMood) pill.addClass("is-active");
+        });
+      }
+    }
+
+    // ── Source picker (optional) ──
+    if (this.plugin.settings.enableSource) {
+      const sourceRow = card.createDiv("memos-capture-meta-row");
+      sourceRow.createSpan({ cls: "memos-capture-meta-label", text: "Source" });
+      const sourcePills = sourceRow.createDiv("memos-capture-meta-pills");
+      for (const src of this.plugin.settings.sourceOptions) {
+        const pill = sourcePills.createSpan({ cls: "memos-capture-meta-pill", text: src });
+        pill.addEventListener("click", () => {
+          this.selectedSource = this.selectedSource === src ? "" : src;
+          sourcePills.querySelectorAll(".memos-capture-meta-pill").forEach((el) => {
+            el.removeClass("is-active");
+          });
+          if (this.selectedSource) pill.addClass("is-active");
+        });
+      }
+    }
 
     // ── Divider ──
     card.createDiv("memos-capture-card-divider");
@@ -194,6 +272,11 @@ export class CaptureItemView extends ItemView {
     target.replaceWith(input);
     input.focus();
 
+    // Track IME composition state (Chinese/Japanese/Korean input)
+    let composing = false;
+    input.addEventListener("compositionstart", () => { composing = true; });
+    input.addEventListener("compositionend", () => { composing = false; });
+
     const commit = () => {
       const values = parseTags(input.value);
       for (const v of values) {
@@ -205,6 +288,9 @@ export class CaptureItemView extends ItemView {
     };
 
     input.addEventListener("keydown", (e: KeyboardEvent) => {
+      // Ignore keydown events while IME is composing (e.g. selecting Chinese characters)
+      if (composing) return;
+
       if (e.key === "Enter" || e.key === " " || e.key === ",") {
         e.preventDefault();
         commit();
@@ -221,6 +307,52 @@ export class CaptureItemView extends ItemView {
   }
 
   // ── Helpers ──────────────────────────────────────────────
+
+  /**
+   * Detect "[[" typed in the textarea and open note suggest modal.
+   * On selection: replaces the "[[" with "[[NoteName]]".
+   * On dismiss: leaves the "[[" as-is so the user can type manually.
+   */
+  private handleWikilinkTrigger() {
+    if (this.wikilinkModalOpen) return;
+
+    const ta = this.textarea;
+    const cursor = ta.selectionStart;
+    const textBefore = ta.value.slice(0, cursor);
+
+    // Check if the last two characters are "[["
+    if (!textBefore.endsWith("[[")) return;
+
+    this.wikilinkModalOpen = true;
+
+    // Position where "[[" starts
+    const bracketStart = cursor - 2;
+    let chosen = false;
+
+    new NoteSuggestModal(
+      this.app,
+      (file) => {
+        chosen = true;
+        // Replace "[[" with "[[NoteName]]"
+        const linkText = `[[${file.basename}]]`;
+        const before = ta.value.slice(0, bracketStart);
+        const after = ta.value.slice(cursor);
+        ta.value = before + linkText + after;
+        const newPos = bracketStart + linkText.length;
+        ta.selectionStart = newPos;
+        ta.selectionEnd = newPos;
+        ta.focus();
+        this.wikilinkModalOpen = false;
+      },
+      () => {
+        // onDismiss — only fire if user didn't choose a file
+        if (!chosen) {
+          ta.focus();
+          this.wikilinkModalOpen = false;
+        }
+      }
+    ).open();
+  }
 
   /** Insert text at the current cursor position in the textarea. */
   private insertAtCursor(text: string) {
@@ -247,8 +379,12 @@ export class CaptureItemView extends ItemView {
     const inlineTags = extractInlineTags(trimmed);
     const allTags = Array.from(new Set([...explicitTags, ...inlineTags]));
 
+    const meta: { mood?: string; source?: string } = {};
+    if (this.selectedMood) meta.mood = this.selectedMood;
+    if (this.selectedSource) meta.source = this.selectedSource;
+
     try {
-      await this.plugin.saveMemo(trimmed, allTags);
+      await this.plugin.saveMemo(trimmed, allTags, Object.keys(meta).length > 0 ? meta : undefined);
       new Notice("Memo saved!");
       await this.plugin.activateView();
       this.leaf.detach();

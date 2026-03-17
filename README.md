@@ -117,6 +117,81 @@ Had a great idea for a new feature today. #excited #obsidian
 
 ---
 
+## 🔗 URI Handler — Capture from Anywhere
+
+You can create memos from outside Obsidian using the `obsidian://memo` URL scheme:
+
+```
+obsidian://memo?content=Your thought here&tags=idea,work
+```
+
+| Parameter | Required | Description |
+|-----------|:--------:|-------------|
+| `content` (or `text`) | ✅ | The memo body text |
+| `tags` | ❌ | Comma-separated tags |
+| `mood` | ❌ | A mood emoji (e.g. `🤔`) |
+| `source` | ❌ | Source label (e.g. `kindle`, `web`) |
+
+### 📱 iOS Shortcut Setup (Step by Step)
+
+Use this to create memos with Siri, home screen shortcut, or Apple Watch.
+
+**Method 1: Simple text input**
+
+1. Open the **Shortcuts** app on your iPhone
+2. Tap **+** → Create new shortcut
+3. Add action: **Ask for Input**
+   - Question: `What's on your mind?`
+   - Input Type: **Text**
+4. Add action: **Open URLs**
+   - URL: `obsidian://memo?content=[Ask for Input]`
+   - (Tap the `[Ask for Input]` variable from step 3)
+5. Rename the shortcut to something like "Quick Memo"
+6. Tap **Done**
+
+Now you can:
+- Say **"Hey Siri, Quick Memo"** → type or dictate → saved
+- Add it to your **Home Screen** as a button
+- Run it from **Apple Watch**
+
+**Method 2: With tags**
+
+Same as above, but change the URL in step 4 to:
+
+```
+obsidian://memo?content=[Ask for Input]&tags=quick
+```
+
+**Method 3: Save clipboard as Memo**
+
+1. Add action: **Get Clipboard**
+2. Add action: **Open URLs**
+   - URL: `obsidian://memo?content=[Clipboard]`
+
+Great for saving text you copied from other apps.
+
+**Method 4: Save current Safari page**
+
+1. In Shortcuts, create a new shortcut and set it as a **Share Sheet** shortcut (accepts URLs)
+2. Add action: **Get Details of Safari Web Page** → get **Name** (title)
+3. Add action: **Open URLs**
+   - URL: `obsidian://memo?content=[Name] - [Shortcut Input]&tags=web`
+
+Now in Safari, tap **Share → Quick Memo** to save the page title + URL.
+
+### 🖥️ Alfred / Raycast (macOS)
+
+**Alfred Workflow:**
+1. Create a new Workflow with a **Keyword** trigger (e.g. `memo`)
+2. Connect to an **Open URL** action
+3. URL: `obsidian://memo?content={query}`
+
+**Raycast:**
+1. Create a Quicklink
+2. URL: `obsidian://memo?content={Query}&tags=quick`
+
+---
+
 ## ⚙️ Settings
 
 | Setting | Default | Description |

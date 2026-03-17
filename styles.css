@@ -229,6 +229,25 @@
 }
 
 /* =============================================================================
+   Wikilinks in Cards
+   ============================================================================= */
+
+.memos-wikilink {
+  color: var(--link-color);
+  cursor: pointer;
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+  font-size: inherit;
+  transition: color 0.12s ease, text-decoration-style 0.12s ease;
+}
+
+.memos-wikilink:hover {
+  color: var(--link-color-hover, var(--link-color));
+  text-decoration-style: solid;
+}
+
+/* =============================================================================
    Card Embedded Images
    ============================================================================= */
 
@@ -289,13 +308,34 @@
 }
 
 /* =============================================================================
+   Card Mood & Source
+   ============================================================================= */
+
+.memos-card-mood {
+  font-size: 14px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.memos-card-source {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background-color: var(--background-primary);
+  color: var(--text-faint);
+  border: 1px solid var(--background-modifier-border);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* =============================================================================
    Highlighted Card (Random Review)
    ============================================================================= */
 
 @keyframes memos-pulse {
-  0%   { box-shadow: 0 0 0 2px var(--text-muted); }
-  50%  { box-shadow: 0 0 0 4px var(--background-modifier-border); }
-  100% { box-shadow: 0 0 0 2px var(--text-muted); }
+  0%   { box-shadow: 0 0 0 1px var(--text-faint); }
+  50%  { box-shadow: 0 0 0 2px var(--background-modifier-border); }
+  100% { box-shadow: 0 0 0 1px var(--text-faint); }
 }
 
 .memos-card-highlighted {
@@ -534,6 +574,57 @@
   height: 1px;
   background: var(--background-modifier-border);
   margin: 0 22px;
+}
+
+/* =============================================================================
+   Mood / Source Meta Row (in Capture view)
+   ============================================================================= */
+
+.memos-capture-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 22px 6px;
+}
+
+.memos-capture-meta-label {
+  font-size: 11px;
+  color: var(--text-faint);
+  font-weight: 500;
+  white-space: nowrap;
+  min-width: 42px;
+}
+
+.memos-capture-meta-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.memos-capture-meta-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  background: var(--background-primary-alt);
+  color: var(--text-muted);
+  border: 1px solid var(--background-modifier-border);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.memos-capture-meta-pill:hover {
+  color: var(--text-normal);
+  border-color: var(--text-faint);
+}
+
+.memos-capture-meta-pill.is-active {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border-color: var(--interactive-accent);
 }
 
 /* Footer toolbar */
@@ -1146,4 +1237,28 @@
 
 .memos-export-dark .memos-export-branding {
   color: #4a4a4a;
+}
+
+/* =============================================================================
+   Transclusion — Memo card style for ![[memo]] embeds
+   ============================================================================= */
+
+/* CSS fallback: match embeds whose src starts with "memo-" (our naming convention) */
+.internal-embed[src^="memo-"],
+.memos-transclusion-card {
+  background-color: var(--background-primary-alt) !important;
+  border-radius: 10px !important;
+  padding: 14px 16px !important;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.06),
+    0 0 0 1px rgba(0, 0, 0, 0.04) !important;
+  margin: 8px 0 !important;
+  border-left: 3px solid var(--interactive-accent) !important;
+}
+
+.theme-dark .internal-embed[src^="memo-"],
+.theme-dark .memos-transclusion-card {
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.04) !important;
 }

@@ -11,6 +11,7 @@ import { MemosSettings, DEFAULT_SETTINGS } from "./types";
 import { MemosView } from "./view";
 import { CaptureItemView } from "./capture-view";
 import { MemosSettingTab } from "./settings";
+import { extractInlineTags } from "./utils";
 
 export default class MemosPlugin extends Plugin {
   settings!: MemosSettings;
@@ -78,6 +79,76 @@ export default class MemosPlugin extends Plugin {
 
     this.addSettingTab(new MemosSettingTab(this.app, this));
 
+    // ── URI handler: obsidian://memo?content=...&tags=... ──
+    this.registerObsidianProtocolHandler("memo", async (params) => {
+      const content = (params.content || params.text || "").trim();
+      const tags = (params.tags || "")
+        .split(",")
+        .map((t: string) => t.trim())
+        .filter(Boolean);
+      const mood = (params.mood || "").trim();
+      const source = (params.source || "").trim();
+
+      if (!content) {
+        new Notice("Memo content is empty.");
+        return;
+      }
+
+      const meta: { mood?: string; source?: string } = {};
+      if (mood) meta.mood = mood;
+      if (source) meta.source = source;
+
+      await this.saveMemo(content, tags, Object.keys(meta).length > 0 ? meta : undefined);
+      new Notice("Memo saved!");
+    });
+
+    // ── Right-click menu: Save selection as Memo ──
+    this.registerEvent(
+      this.app.workspace.on("editor-menu", (menu, editor) => {
+        const selection = editor.getSelection();
+        if (!selection) return;
+
+        menu.addItem((item) => {
+          item
+            .setTitle("Save as Memo")
+            .setIcon("sticky-note")
+            .onClick(async () => {
+              const tags = extractInlineTags(selection);
+              await this.saveMemo(selection, tags);
+              new Notice("Selection saved as Memo!");
+            });
+        });
+      })
+    );
+
+    // ── Transclusion: style ![[memo]] embeds as cards ──
+    // Uses CSS attribute selector [src^="memo-"] for instant, reliable styling.
+    // Additionally, a PostProcessor adds a class for memos not following the
+    // naming convention (detected via frontmatter type: memo).
+    this.registerMarkdownPostProcessor((el) => {
+      // Handle already-rendered embeds
+      const embeds = el.querySelectorAll<HTMLElement>('.internal-embed:not([class*="memos-transclusion"])');
+      this.tagMemoEmbeds(embeds);
+
+      // Handle lazily-rendered embeds via MutationObserver
+      const observer = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+          for (const node of mutation.addedNodes) {
+            if (node instanceof HTMLElement) {
+              const added = node.matches?.(".internal-embed")
+                ? [node]
+                : Array.from(node.querySelectorAll?.(".internal-embed") ?? []);
+              if (added.length > 0) this.tagMemoEmbeds(added as Iterable<HTMLElement>);
+            }
+          }
+        }
+      });
+      observer.observe(el, { childList: true, subtree: true });
+
+      // Disconnect after 5s to avoid leaks (embeds should be resolved by then)
+      setTimeout(() => observer.disconnect(), 5000);
+    });
+
     this.app.workspace.onLayoutReady(() => {
       if (Platform.isMobile) {
         this.activateView();
@@ -107,7 +178,7 @@ export default class MemosPlugin extends Plugin {
     this.app.workspace.revealLeaf(leaf);
   }
 
-  async saveMemo(content: string, tags: string[]) {
+  async saveMemo(content: string, tags: string[], meta?: { mood?: string; source?: string }): Promise<string> {
     const now = new Date();
     const iso = now.toISOString();
     // Use local time consistently for both date and time portions
@@ -134,7 +205,13 @@ export default class MemosPlugin extends Plugin {
         ? `tags:\n${allTags.map((t) => `  - ${t}`).join("\n")}`
         : "tags: []";
 
-    const frontmatter = `---\ncreated: ${iso}\ntype: memo\n${tagYaml}\n---\n\n`;
+    // Build optional extended fields (mood, source, status)
+    let extraYaml = "";
+    if (meta?.mood) extraYaml += `mood: "${meta.mood}"\n`;
+    if (meta?.source) extraYaml += `source: "${meta.source}"\n`;
+    extraYaml += "status: active\n";
+
+    const frontmatter = `---\ncreated: ${iso}\ntype: memo\n${tagYaml}\n${extraYaml}---\n\n`;
     const fileContent = frontmatter + content;
 
     const folder = normalizePath(this.settings.saveFolder);
@@ -153,6 +230,25 @@ export default class MemosPlugin extends Plugin {
       if (view instanceof MemosView) {
         await view.refresh();
       }
+    }
+
+    return filename;
+  }
+
+  /** Tag embed elements whose source file has type: memo in frontmatter. */
+  private tagMemoEmbeds(embeds: Iterable<HTMLElement>) {
+    for (const embed of embeds) {
+      if (embed.hasClass("memos-transclusion-card")) continue;
+      const src = embed.getAttribute("src");
+      if (!src) continue;
+
+      const file = this.app.metadataCache.getFirstLinkpathDest(src, "");
+      if (!file) continue;
+
+      const cache = this.app.metadataCache.getFileCache(file);
+      if (!cache?.frontmatter || cache.frontmatter["type"] !== "memo") continue;
+
+      embed.addClass("memos-transclusion-card");
     }
   }
 

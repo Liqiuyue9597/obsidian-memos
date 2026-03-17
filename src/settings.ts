@@ -72,6 +72,70 @@ export class MemosSettingTab extends PluginSettingTab {
           })
       );
 
+    new Setting(containerEl).setName("Extended metadata").setHeading();
+
+    new Setting(containerEl)
+      .setName("Enable mood")
+      .setDesc("Show mood picker when capturing memos. Adds a mood field to frontmatter for Dataview queries.")
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.enableMood)
+          .onChange(async (value) => {
+            this.plugin.settings.enableMood = value;
+            await this.plugin.saveSettings();
+            this.display();
+          })
+      );
+
+    if (this.plugin.settings.enableMood) {
+      new Setting(containerEl)
+        .setName("Mood options")
+        .setDesc("Comma-separated emojis for the mood picker.")
+        .addText((text) =>
+          text
+            .setPlaceholder("💡, 🤔, 😊, 😤, 📖")
+            .setValue(this.plugin.settings.moodOptions.join(", "))
+            .onChange(async (value) => {
+              this.plugin.settings.moodOptions = value
+                .split(",")
+                .map((s) => s.trim())
+                .filter(Boolean);
+              await this.plugin.saveSettings();
+            })
+        );
+    }
+
+    new Setting(containerEl)
+      .setName("Enable source")
+      .setDesc("Show source picker when capturing memos. Adds a source field to frontmatter for Dataview queries.")
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.enableSource)
+          .onChange(async (value) => {
+            this.plugin.settings.enableSource = value;
+            await this.plugin.saveSettings();
+            this.display();
+          })
+      );
+
+    if (this.plugin.settings.enableSource) {
+      new Setting(containerEl)
+        .setName("Source options")
+        .setDesc("Comma-separated source labels (e.g. thought, kindle, web).")
+        .addText((text) =>
+          text
+            .setPlaceholder("thought, kindle, web, conversation, podcast")
+            .setValue(this.plugin.settings.sourceOptions.join(", "))
+            .onChange(async (value) => {
+              this.plugin.settings.sourceOptions = value
+                .split(",")
+                .map((s) => s.trim())
+                .filter(Boolean);
+              await this.plugin.saveSettings();
+            })
+        );
+    }
+
     new Setting(containerEl).setName("Image export").setHeading();
 
     new Setting(containerEl)

@@ -6,6 +6,8 @@ export interface MemoNote {
   tags: string[];   // merged frontmatter + inline #tags
   created: string;  // ISO datetime string
   dateLabel: string; // "YYYY-MM-DD" for grouping
+  mood: string;     // mood emoji (or "")
+  source: string;   // source label (or "")
 }
 
 export interface MemoStats {
@@ -25,6 +27,10 @@ export interface MemosSettings {
   authorName: string;        // default: ""
   showAuthorInExport: boolean; // default: false
   showBrandingInExport: boolean; // default: true
+  enableMood: boolean;       // default: false
+  enableSource: boolean;     // default: false
+  moodOptions: string[];     // default: ["💡", "🤔", "😊", "😤", "📖"]
+  sourceOptions: string[];   // default: ["thought", "kindle", "web", "conversation", "podcast"]
 }
 
 export const DEFAULT_SETTINGS: MemosSettings = {
@@ -36,4 +42,8 @@ export const DEFAULT_SETTINGS: MemosSettings = {
   authorName: "",
   showAuthorInExport: false,
   showBrandingInExport: true,
+  enableMood: false,
+  enableSource: false,
+  moodOptions: ["💡", "🤔", "😊", "😤", "📖"],
+  sourceOptions: ["thought", "kindle", "web", "conversation", "podcast"],
 };

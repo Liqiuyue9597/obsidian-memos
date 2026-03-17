@@ -7,13 +7,14 @@ import {
   setIcon,
 } from "obsidian";
 
-import { VIEW_TYPE_MEMOS, INLINE_TAG_RE } from "./constants";
+import { VIEW_TYPE_MEMOS, INLINE_TAG_RE, WIKILINK_RE } from "./constants";
 import { MemoNote } from "./types";
 import { extractInlineTags } from "./utils";
 import { parseMemoContent } from "./memo-parser";
 import { computeStats, renderStatsSection } from "./stats";
 import type MemosPlugin from "./plugin";
 import { ExportModal } from "./export-image";
+import { exportToCanvas } from "./canvas-export";
 
 export class MemosView extends ItemView {
   plugin: MemosPlugin;
@@ -148,7 +149,10 @@ export class MemosView extends ItemView {
 
     const dateLabel = created.slice(0, 10);
 
-    return { file, content: body, tags, created, dateLabel };
+    const mood = typeof fm["mood"] === "string" ? fm["mood"].replace(/^"|"$/g, "") : "";
+    const source = typeof fm["source"] === "string" ? fm["source"].replace(/^"|"$/g, "") : "";
+
+    return { file, content: body, tags, created, dateLabel, mood, source };
   }
 
   renderToolbar(el: HTMLElement) {
@@ -203,16 +207,20 @@ export class MemosView extends ItemView {
     randomBtn.addEventListener("click", () => {
       this.handleRandomReview();
     });
+
+    const canvasBtn = right.createDiv({
+      cls: "memos-toolbar-btn",
+      attr: { "aria-label": "Send to Canvas" },
+    });
+    setIcon(canvasBtn, "layout-dashboard");
+    canvasBtn.addEventListener("click", () => {
+      const filtered = this.getFilteredMemos();
+      exportToCanvas(this.app, filtered);
+    });
   }
 
   renderCards(el: HTMLElement) {
-    let filtered = this.memos;
-    if (this.activeTag) {
-      filtered = filtered.filter((m) => m.tags.includes(this.activeTag!));
-    }
-    if (this.activeDateFilter) {
-      filtered = filtered.filter((m) => m.dateLabel === this.activeDateFilter);
-    }
+    const filtered = this.getFilteredMemos();
 
     if (filtered.length === 0) {
       const empty = el.createDiv("memos-empty");
@@ -259,8 +267,16 @@ export class MemosView extends ItemView {
       }
     }
 
-    // Right side of footer: time + share button
+    // Right side of footer: mood + source + time + share button
     const footerRight = footer.createDiv("memos-card-footer-right");
+
+    if (memo.mood) {
+      footerRight.createSpan({ cls: "memos-card-mood", text: memo.mood });
+    }
+
+    if (memo.source) {
+      footerRight.createSpan({ cls: "memos-card-source", text: memo.source });
+    }
 
     const time = footerRight.createSpan({ cls: "memos-card-time" });
     const d = new Date(memo.created);
@@ -320,24 +336,63 @@ export class MemosView extends ItemView {
     }
   }
 
-  /** Render a text segment with inline #tag support. */
+  /** Render a text segment with inline #tag and [[wikilink]] support. */
   private renderTextSegment(text: string, container: HTMLElement) {
-    const re = new RegExp(INLINE_TAG_RE.source, INLINE_TAG_RE.flags);
-    let lastIndex = 0;
-    let match: RegExpExecArray | null;
+    const tagRe = new RegExp(INLINE_TAG_RE.source, INLINE_TAG_RE.flags);
+    const linkRe = new RegExp(WIKILINK_RE.source, WIKILINK_RE.flags);
 
-    while ((match = re.exec(text)) !== null) {
+    // Collect all matches and sort by position
+    const matches: Array<{
+      index: number;
+      length: number;
+      type: "tag" | "link";
+      tagName?: string;
+      linkPath?: string;
+      linkAlias?: string;
+    }> = [];
+
+    let m: RegExpExecArray | null;
+    while ((m = tagRe.exec(text)) !== null) {
+      matches.push({ index: m.index, length: m[0].length, type: "tag", tagName: m[1] });
+    }
+    while ((m = linkRe.exec(text)) !== null) {
+      matches.push({ index: m.index, length: m[0].length, type: "link", linkPath: m[1], linkAlias: m[2] });
+    }
+    matches.sort((a, b) => a.index - b.index);
+
+    let lastIndex = 0;
+    for (const match of matches) {
+      if (match.index < lastIndex) continue; // skip overlapping matches
       if (match.index > lastIndex) {
         container.appendText(text.slice(lastIndex, match.index));
       }
-      const tagName = match[1];
-      const tagSpan = container.createSpan({ cls: "memos-inline-tag", text: `#${tagName}` });
-      tagSpan.dataset["tag"] = tagName;
-      tagSpan.addEventListener("click", (e) => {
-        e.stopPropagation();
-        this.handleTagClick(tagName);
-      });
-      lastIndex = re.lastIndex;
+      if (match.type === "tag" && match.tagName) {
+        const tagSpan = container.createSpan({ cls: "memos-inline-tag", text: `#${match.tagName}` });
+        tagSpan.dataset["tag"] = match.tagName;
+        tagSpan.addEventListener("click", (e) => {
+          e.stopPropagation();
+          this.handleTagClick(match.tagName!);
+        });
+      } else if (match.type === "link" && match.linkPath) {
+        const displayText = match.linkAlias || match.linkPath;
+        const linkSpan = container.createSpan({ cls: "memos-wikilink", text: displayText });
+        linkSpan.dataset["href"] = match.linkPath;
+        linkSpan.addEventListener("click", (e) => {
+          e.stopPropagation();
+          this.app.workspace.openLinkText(match.linkPath!, "", false);
+        });
+        linkSpan.addEventListener("mouseover", (e: MouseEvent) => {
+          this.app.workspace.trigger("hover-link", {
+            event: e,
+            source: VIEW_TYPE_MEMOS,
+            hoverParent: this,
+            targetEl: linkSpan,
+            linktext: match.linkPath!,
+            sourcePath: "",
+          });
+        });
+      }
+      lastIndex = match.index + match.length;
     }
     if (lastIndex < text.length) {
       container.appendText(text.slice(lastIndex));
@@ -384,6 +439,18 @@ export class MemosView extends ItemView {
     this.refresh();
   }
 
+  /** Return memos filtered by the currently active tag and date filters. */
+  getFilteredMemos(): MemoNote[] {
+    let filtered = this.memos;
+    if (this.activeTag) {
+      filtered = filtered.filter((m) => m.tags.includes(this.activeTag!));
+    }
+    if (this.activeDateFilter) {
+      filtered = filtered.filter((m) => m.dateLabel === this.activeDateFilter);
+    }
+    return filtered;
+  }
+
   handleRandomReview() {
     // Remove previous highlight
     if (this.highlightedCardEl) {
@@ -391,9 +458,7 @@ export class MemosView extends ItemView {
       this.highlightedCardEl = null;
     }
 
-    const filtered = this.activeTag
-      ? this.memos.filter((m) => m.tags.includes(this.activeTag!))
-      : this.memos;
+    const filtered = this.getFilteredMemos();
 
     if (filtered.length === 0) return;
 

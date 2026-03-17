@@ -117,6 +117,83 @@ tags:
 
 ---
 
+## 🔗 URI 快捷捕获 — 从任何地方记 Memo
+
+通过 `obsidian://memo` URL 可以从 Obsidian 外部一键创建 memo：
+
+```
+obsidian://memo?content=你的想法&tags=idea,work
+```
+
+| 参数 | 必填 | 说明 |
+|------|:----:|------|
+| `content`（或 `text`） | ✅ | Memo 正文内容 |
+| `tags` | ❌ | 逗号分隔的标签 |
+| `mood` | ❌ | 心情 emoji（如 `🤔`） |
+| `source` | ❌ | 来源标记（如 `kindle`、`web`） |
+
+### 📱 iOS 快捷指令配置（手把手教程）
+
+配好之后可以用 Siri 语音记录、主屏幕按钮、Apple Watch 一键创建 memo。
+
+**方法一：文字输入（最常用）**
+
+1. 打开 iPhone 上的 **快捷指令** app
+2. 点右上角 **+** 创建新快捷指令
+3. 添加操作：**要求输入**
+   - 问题填：`记点什么？`
+   - 输入类型选：**文本**
+4. 添加操作：**打开 URL**
+   - URL 填：`obsidian://memo?content=[要求输入的结果]`
+   - （点击输入框，选择第 3 步的变量）
+5. 给快捷指令起名，比如 "Quick Memo"
+6. 点 **完成**
+
+现在你可以：
+- 说 **"嘿 Siri，Quick Memo"** → 输入或口述 → 自动保存
+- 把它添加到 **主屏幕** 当按钮用
+- 在 **Apple Watch** 上运行
+
+**方法二：带固定标签**
+
+和上面一样，只是把第 4 步的 URL 改成：
+
+```
+obsidian://memo?content=[要求输入的结果]&tags=quick
+```
+
+这样每条 memo 会自动带上 `#quick` 标签。
+
+**方法三：保存剪贴板内容**
+
+1. 添加操作：**获取剪贴板**
+2. 添加操作：**打开 URL**
+   - URL：`obsidian://memo?content=[剪贴板]`
+
+适合把其他 app 里复制的文字快速存为 memo。
+
+**方法四：保存 Safari 当前网页**
+
+1. 创建新快捷指令，设为 **共享表单**（接受 URL）
+2. 添加操作：**获取 Safari 网页的详细信息** → 获取 **名称**（标题）
+3. 添加操作：**打开 URL**
+   - URL：`obsidian://memo?content=[名称] - [快捷指令输入]&tags=web`
+
+在 Safari 里点 **分享 → Quick Memo** 就能把网页标题和链接存成 memo。
+
+### 🖥️ Alfred / Raycast（macOS）
+
+**Alfred 工作流：**
+1. 新建 Workflow，添加 **Keyword** 触发器（如 `memo`）
+2. 连接到 **Open URL** 操作
+3. URL 填：`obsidian://memo?content={query}`
+
+**Raycast：**
+1. 创建一个 Quicklink
+2. URL：`obsidian://memo?content={Query}&tags=quick`
+
+---
+
 ## ⚙️ 设置
 
 | 设置项 | 默认值 | 说明 |
