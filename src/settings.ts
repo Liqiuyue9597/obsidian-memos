@@ -1,6 +1,7 @@
-import { App, PluginSettingTab, Setting } from "obsidian";
+import { App, Notice, PluginSettingTab, Setting } from "obsidian";
 
 import type MemosPlugin from "./plugin";
+import { importFlomoHtml } from "./flomo-import";
 
 export class MemosSettingTab extends PluginSettingTab {
   plugin: MemosPlugin;
@@ -175,6 +176,50 @@ export class MemosSettingTab extends PluginSettingTab {
           .onChange(async (value) => {
             this.plugin.settings.showBrandingInExport = value;
             await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl).setName("Import").setHeading();
+
+    new Setting(containerEl)
+      .setName("Import from Flomo")
+      .setDesc(
+        "Select the HTML file exported from Flomo. " +
+        "Each memo will be converted to a .md file with proper frontmatter and saved to the save folder. " +
+        "Duplicate imports are automatically skipped."
+      )
+      .addButton((btn) =>
+        btn
+          .setButtonText("Choose HTML file")
+          .setCta()
+          .onClick(() => {
+            const input = document.createElement("input");
+            input.type = "file";
+            input.accept = ".html,.htm";
+            input.addEventListener("change", async () => {
+              const file = input.files?.[0];
+              if (!file) return;
+
+              new Notice(`Reading ${file.name}...`);
+              try {
+                const html = await file.text();
+                const count = await importFlomoHtml(
+                  this.app,
+                  html,
+                  this.plugin.settings.saveFolder
+                );
+                if (count > 0) {
+                  new Notice(`Successfully imported ${count} memos from Flomo!`);
+                } else {
+                  new Notice("No new memos to import (all already exist or file is empty).");
+                }
+              } catch (err) {
+                new Notice(
+                  `Import failed: ${err instanceof Error ? err.message : String(err)}`
+                );
+              }
+            });
+            input.click();
           })
       );
   }
