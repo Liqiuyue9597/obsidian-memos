@@ -22,10 +22,10 @@ export class MemosSettingTab extends PluginSettingTab {
       .setDesc(i18n.saveFolderDesc)
       .addText((text) =>
         text
-          .setPlaceholder("00-Inbox")
+          .setPlaceholder("Memos")
           .setValue(this.plugin.settings.saveFolder)
           .onChange(async (value) => {
-            this.plugin.settings.saveFolder = value.trim() || "00-Inbox";
+            this.plugin.settings.saveFolder = value.trim() || "Memos";
             await this.plugin.saveSettings();
           })
       );

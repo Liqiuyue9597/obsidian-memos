@@ -11,16 +11,6 @@ export function extractInlineTags(text: string): string[] {
   return tags;
 }
 
-/** Escape a string for safe insertion into an HTML attribute value. */
-export function escapeHtmlAttr(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
-
 /** Parse user-input tag string into an array of clean tag names. */
 export function parseTags(input: string): string[] {
   return input

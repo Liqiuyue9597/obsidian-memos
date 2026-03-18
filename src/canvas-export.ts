@@ -61,7 +61,7 @@ export async function exportToCanvas(
     for (let i = 0; i < groupMemos.length; i++) {
       const memo = groupMemos[i];
       nodes.push({
-        id: memo.file.basename,
+        id: `${memo.file.path}-${i}`,
         type: "file",
         file: memo.file.path,
         x: groupX,

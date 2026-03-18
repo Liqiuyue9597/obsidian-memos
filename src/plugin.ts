@@ -24,7 +24,8 @@ export default class MemosPlugin extends Plugin {
     this.registerView(VIEW_TYPE_CAPTURE, (leaf) => new CaptureItemView(leaf, this));
 
     // Ribbon icon → open Memos view (fullscreen on mobile)
-    this.addRibbonIcon("sticky-note", i18n.openMemosView, () => {
+    const MEMO_ICON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><rect x="16" y="12" width="56" height="72" rx="6"/><path d="M30 36h28M30 50h20"/><path d="M72 12l-16 0"/><path d="M62 52l-4 18 8-6 8 6-4-18" fill="currentColor" stroke-width="4"/><path d="M66 38v-2a8 8 0 0 1 16 0v6c0 3-2 5.5-4.5 7L70 54" stroke-width="5"/></svg>`;
+    this.addRibbonIcon(MEMO_ICON, i18n.openMemosView, () => {
       this.activateView();
     });
 
@@ -51,7 +52,7 @@ export default class MemosPlugin extends Plugin {
       const content = (params.content || params.text || "").trim();
       const tags = (params.tags || "")
         .split(",")
-        .map((t: string) => t.trim())
+        .map((s: string) => s.trim())
         .filter(Boolean);
       const mood = (params.mood || "").trim();
       const source = (params.source || "").trim();
@@ -103,6 +104,7 @@ export default class MemosPlugin extends Plugin {
     // Uses CSS attribute selector [src^="memo-"] for instant, reliable styling.
     // Additionally, a PostProcessor adds a class for memos not following the
     // naming convention (detected via frontmatter type: memo).
+    const EMBED_RESOLVE_TIMEOUT_MS = 5000;
     this.registerMarkdownPostProcessor((el) => {
       // Handle already-rendered embeds
       const embeds = el.querySelectorAll<HTMLElement>('.internal-embed:not([class*="memos-transclusion"])');
@@ -123,8 +125,8 @@ export default class MemosPlugin extends Plugin {
       });
       observer.observe(el, { childList: true, subtree: true });
 
-      // Disconnect after 5s to avoid leaks (embeds should be resolved by then)
-      setTimeout(() => observer.disconnect(), 5000);
+      // Disconnect after timeout to avoid leaks (embeds should be resolved by then)
+      setTimeout(() => observer.disconnect(), EMBED_RESOLVE_TIMEOUT_MS);
     });
 
     this.app.workspace.onLayoutReady(() => {
@@ -164,15 +166,16 @@ export default class MemosPlugin extends Plugin {
     const dateStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
     const timeStr = `${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
     const ms = pad(now.getMilliseconds(), 3);
-    const filename = `memo-${dateStr}-${timeStr}-${ms}.md`;
+    const rand = Math.random().toString(36).slice(2, 6);
+    const filename = `memo-${dateStr}-${timeStr}-${ms}-${rand}.md`;
 
     // Build tag list: fixed tag first, then user-provided tags
     const allTags: string[] = [];
     if (this.settings.useFixedTag && this.settings.fixedTag) {
       allTags.push(this.settings.fixedTag.replace(/^#+/, ""));
     }
-    for (const t of tags) {
-      const clean = t.replace(/^#+/, "");
+    for (const tag of tags) {
+      const clean = tag.replace(/^#+/, "");
       if (clean && !allTags.includes(clean)) {
         allTags.push(clean);
       }

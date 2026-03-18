@@ -2,6 +2,9 @@ node_modules/
 main.js
 *.js.map
 data.json
+.DS_Store
+*.tgz
+dist/
 
 # CodeBuddy local config
 .codebuddy/

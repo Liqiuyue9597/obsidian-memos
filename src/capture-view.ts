@@ -248,7 +248,7 @@ export class CaptureItemView extends ItemView {
       });
     }
 
-    // "+ 添加标签" button
+    // "+ Add tag" button
     const addBtn = this.tagsContainer.createDiv("memos-capture-card-tag-add");
     addBtn.setText(i18n.addTagButton);
     addBtn.addEventListener("click", () => {

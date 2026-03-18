@@ -283,10 +283,10 @@ export function t(key: string, vars?: Record<string, string | number>): string {
   if (typeof val !== "string") return key;
   if (vars) {
     for (const [k, v] of Object.entries(vars)) {
-      val = val.replace(`\${${k}}`, String(v));
+      val = (val as string).replaceAll(`\${${k}}`, String(v));
     }
   }
-  return val;
+  return val as string;
 }
 
 function isChinese(): boolean {
@@ -297,5 +297,9 @@ function isChinese(): boolean {
   }
 }
 
-/** The active i18n messages object. */
+/**
+ * The active i18n messages object.
+ * Resolved once at module load time. Obsidian requires a restart to change
+ * the display language, so a static binding is sufficient here.
+ */
 export const i18n: Messages = isChinese() ? zh : en;

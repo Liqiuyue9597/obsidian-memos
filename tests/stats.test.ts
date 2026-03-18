@@ -15,6 +15,8 @@ function makeMemo(dateLabel: string, content = "test"): MemoNote {
     tags: [],
     created: `${dateLabel}T12:00:00`,
     dateLabel,
+    mood: "",
+    source: "",
   };
 }
 

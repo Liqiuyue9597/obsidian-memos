@@ -33,7 +33,9 @@ export function computeStats(memos: MemoNote[]): MemoStats {
 }
 
 export function computeStreak(dailyCounts: Map<string, number>, todayLabel: string): number {
-  const todayDate = new Date(todayLabel + "T00:00:00");
+  // Parse date manually to avoid timezone ambiguity with Date constructor
+  const [y, m, d] = todayLabel.split("-").map(Number);
+  const todayDate = new Date(y, m - 1, d);
   // Start from today if it has memos, otherwise from yesterday
   let startOffset = dailyCounts.has(todayLabel) ? 0 : 1;
   let streak = 0;
@@ -155,7 +157,6 @@ export function renderHeatmap(
       }
     }
   }
-
 }
 
 /**

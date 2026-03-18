@@ -68,7 +68,7 @@ const IMAGE_MAX_WIDTH = CARD_WIDTH - PADDING_X * 2;
 const IMAGE_MAX_HEIGHT = 300;
 
 /** Extract image embed filenames from content. */
-function extractImageEmbeds(content: string): string[] {
+export function extractImageEmbeds(content: string): string[] {
   const names: string[] = [];
   let m: RegExpExecArray | null;
   const re = new RegExp(IMAGE_EMBED_RE.source, IMAGE_EMBED_RE.flags);
@@ -79,7 +79,7 @@ function extractImageEmbeds(content: string): string[] {
 }
 
 /** Strip image embed syntax from content text. */
-function stripImageEmbeds(content: string): string {
+export function stripImageEmbeds(content: string): string {
   return content.replace(IMAGE_EMBED_RE, "").trim();
 }
 
@@ -97,7 +97,7 @@ async function loadVaultImage(app: App, filename: string): Promise<HTMLImageElem
     const blob = new Blob([arrayBuf]);
     const url = URL.createObjectURL(blob);
 
-    return new Promise<HTMLImageElement>((resolve) => {
+    return new Promise<HTMLImageElement | null>((resolve) => {
       const img = new Image();
       img.onload = () => {
         URL.revokeObjectURL(url);
@@ -105,7 +105,7 @@ async function loadVaultImage(app: App, filename: string): Promise<HTMLImageElem
       };
       img.onerror = () => {
         URL.revokeObjectURL(url);
-        resolve(null as unknown as HTMLImageElement);
+        resolve(null);
       };
       img.src = url;
     });
@@ -117,7 +117,7 @@ async function loadVaultImage(app: App, filename: string): Promise<HTMLImageElem
 /**
  * Calculate scaled dimensions to fit within max bounds while preserving aspect ratio.
  */
-function fitImage(
+export function fitImage(
   imgW: number,
   imgH: number,
   maxW: number,
@@ -128,13 +128,13 @@ function fitImage(
 }
 
 /** A text segment: either plain text or a #tag. */
-interface TextSegment {
+export interface TextSegment {
   text: string;
   isTag: boolean;
 }
 
 /** Parse content into lines of segments. */
-function parseContentSegments(content: string): TextSegment[][] {
+export function parseContentSegments(content: string): TextSegment[][] {
   const lines = content.split("\n");
   const result: TextSegment[][] = [];
   const re = new RegExp(INLINE_TAG_RE.source, INLINE_TAG_RE.flags);

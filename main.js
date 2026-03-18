@@ -40,7 +40,7 @@ var WIKILINK_RE = /\[\[([^\]|]+?)(?:\|([^\]]+?))?\]\]/g;
 
 // src/types.ts
 var DEFAULT_SETTINGS = {
-  saveFolder: "00-Inbox",
+  saveFolder: "Memos",
   useFixedTag: false,
   fixedTag: "",
   statsCollapsed: false,
@@ -264,7 +264,7 @@ function t(key, vars) {
     return key;
   if (vars) {
     for (const [k, v] of Object.entries(vars)) {
-      val = val.replace(`\${${k}}`, String(v));
+      val = val.replaceAll(`\${${k}}`, String(v));
     }
   }
   return val;
@@ -301,13 +301,14 @@ function computeStats(memos) {
   return { total, streak, today, thisMonth, dailyCounts };
 }
 function computeStreak(dailyCounts, todayLabel) {
-  const todayDate = /* @__PURE__ */ new Date(todayLabel + "T00:00:00");
+  const [y, m, d] = todayLabel.split("-").map(Number);
+  const todayDate = new Date(y, m - 1, d);
   let startOffset = dailyCounts.has(todayLabel) ? 0 : 1;
   let streak = 0;
   for (let i = startOffset; ; i++) {
-    const d = new Date(todayDate);
-    d.setDate(d.getDate() - i);
-    const label = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, "0")}-${d.getDate().toString().padStart(2, "0")}`;
+    const d2 = new Date(todayDate);
+    d2.setDate(d2.getDate() - i);
+    const label = `${d2.getFullYear()}-${(d2.getMonth() + 1).toString().padStart(2, "0")}-${d2.getDate().toString().padStart(2, "0")}`;
     if (dailyCounts.has(label)) {
       streak++;
     } else {
@@ -927,7 +928,7 @@ async function exportToCanvas(app, memos, canvasName) {
     for (let i = 0; i < groupMemos.length; i++) {
       const memo = groupMemos[i];
       nodes.push({
-        id: memo.file.basename,
+        id: `${memo.file.path}-${i}`,
         type: "file",
         file: memo.file.path,
         x: groupX,
@@ -1039,16 +1040,16 @@ var _MemosView = class extends import_obsidian5.ItemView {
     const files = abstractFolder.children.filter(
       (f) => f instanceof import_obsidian5.TFile && f.name.endsWith(".md")
     );
-    const results = [];
-    for (const file of files) {
-      const cache = this.app.metadataCache.getFileCache(file);
-      const fm = cache == null ? void 0 : cache.frontmatter;
-      if (!fm || fm["type"] !== "memo")
-        continue;
-      const raw = await this.app.vault.read(file);
-      const memo = this.parseMemo(file, raw, fm, cache);
-      results.push(memo);
-    }
+    const results = (await Promise.all(
+      files.map(async (file) => {
+        const cache = this.app.metadataCache.getFileCache(file);
+        const fm = cache == null ? void 0 : cache.frontmatter;
+        if (!fm || fm["type"] !== "memo")
+          return null;
+        const raw = await this.app.vault.read(file);
+        return this.parseMemo(file, raw, fm, cache);
+      })
+    )).filter((m) => m !== null);
     results.sort((a, b) => b.created.localeCompare(a.created));
     this.memos = results;
   }
@@ -1729,13 +1730,8 @@ function parseFlomoHtml(html) {
   return memos;
 }
 function buildMemoFile(memo) {
-  let iso;
-  try {
-    const d = new Date(memo.time.replace(" ", "T"));
-    iso = isNaN(d.getTime()) ? (/* @__PURE__ */ new Date()).toISOString() : d.toISOString();
-  } catch (e) {
-    iso = (/* @__PURE__ */ new Date()).toISOString();
-  }
+  const d = new Date(memo.time.replace(" ", "T"));
+  const iso = isNaN(d.getTime()) ? (/* @__PURE__ */ new Date()).toISOString() : d.toISOString();
   const tagYaml = memo.tags.length > 0 ? `tags:
 ${memo.tags.map((t3) => `  - ${t3}`).join("\n")}` : "tags: []";
   const frontmatter = `---
@@ -1761,7 +1757,6 @@ function buildFilename(time, index) {
   return `memo-flomo-import-${String(index).padStart(4, "0")}.md`;
 }
 async function importFlomoHtml(app, htmlContent, saveFolder) {
-  var _a, _b, _c, _d;
   const memos = parseFlomoHtml(htmlContent);
   if (memos.length === 0) {
     new import_obsidian7.Notice(i18n.noMemosInHtml);
@@ -1772,8 +1767,9 @@ async function importFlomoHtml(app, htmlContent, saveFolder) {
     await app.vault.createFolder(folder);
   }
   let imported = 0;
+  const folderObj = app.vault.getAbstractFileByPath(folder);
   const existingFiles = new Set(
-    (_d = (_c = (_b = (_a = app.vault.getAbstractFileByPath(folder)) == null ? void 0 : _a.children) == null ? void 0 : _b.filter((f) => f instanceof import_obsidian7.TFile)) == null ? void 0 : _c.map((f) => f.name)) != null ? _d : []
+    folderObj instanceof import_obsidian7.TFolder ? folderObj.children.filter((f) => f instanceof import_obsidian7.TFile).map((f) => f.name) : []
   );
   for (let i = 0; i < memos.length; i++) {
     const memo = memos[i];
@@ -1803,8 +1799,8 @@ var MemosSettingTab = class extends import_obsidian8.PluginSettingTab {
     containerEl.empty();
     new import_obsidian8.Setting(containerEl).setName(i18n.memosSettings).setHeading();
     new import_obsidian8.Setting(containerEl).setName(i18n.saveFolder).setDesc(i18n.saveFolderDesc).addText(
-      (text) => text.setPlaceholder("00-Inbox").setValue(this.plugin.settings.saveFolder).onChange(async (value) => {
-        this.plugin.settings.saveFolder = value.trim() || "00-Inbox";
+      (text) => text.setPlaceholder("Memos").setValue(this.plugin.settings.saveFolder).onChange(async (value) => {
+        this.plugin.settings.saveFolder = value.trim() || "Memos";
         await this.plugin.saveSettings();
       })
     );
@@ -1918,7 +1914,8 @@ var MemosPlugin = class extends import_obsidian9.Plugin {
     await this.loadSettings();
     this.registerView(VIEW_TYPE_MEMOS, (leaf) => new MemosView(leaf, this));
     this.registerView(VIEW_TYPE_CAPTURE, (leaf) => new CaptureItemView(leaf, this));
-    this.addRibbonIcon("sticky-note", i18n.openMemosView, () => {
+    const MEMO_ICON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><rect x="16" y="12" width="56" height="72" rx="6"/><path d="M30 36h28M30 50h20"/><path d="M72 12l-16 0"/><path d="M62 52l-4 18 8-6 8 6-4-18" fill="currentColor" stroke-width="4"/><path d="M66 38v-2a8 8 0 0 1 16 0v6c0 3-2 5.5-4.5 7L70 54" stroke-width="5"/></svg>`;
+    this.addRibbonIcon(MEMO_ICON, i18n.openMemosView, () => {
       this.activateView();
     });
     this.addCommand({
@@ -1938,7 +1935,7 @@ var MemosPlugin = class extends import_obsidian9.Plugin {
     this.addSettingTab(new MemosSettingTab(this.app, this));
     this.registerObsidianProtocolHandler("memo", async (params) => {
       const content = (params.content || params.text || "").trim();
-      const tags = (params.tags || "").split(",").map((t3) => t3.trim()).filter(Boolean);
+      const tags = (params.tags || "").split(",").map((s) => s.trim()).filter(Boolean);
       const mood = (params.mood || "").trim();
       const source = (params.source || "").trim();
       if (!content) {
@@ -1976,6 +1973,7 @@ var MemosPlugin = class extends import_obsidian9.Plugin {
         });
       })
     );
+    const EMBED_RESOLVE_TIMEOUT_MS = 5e3;
     this.registerMarkdownPostProcessor((el) => {
       const embeds = el.querySelectorAll('.internal-embed:not([class*="memos-transclusion"])');
       this.tagMemoEmbeds(embeds);
@@ -1992,7 +1990,7 @@ var MemosPlugin = class extends import_obsidian9.Plugin {
         }
       });
       observer.observe(el, { childList: true, subtree: true });
-      setTimeout(() => observer.disconnect(), 5e3);
+      setTimeout(() => observer.disconnect(), EMBED_RESOLVE_TIMEOUT_MS);
     });
     this.app.workspace.onLayoutReady(() => {
       if (import_obsidian9.Platform.isMobile) {
@@ -2024,13 +2022,14 @@ var MemosPlugin = class extends import_obsidian9.Plugin {
     const dateStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
     const timeStr = `${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
     const ms = pad(now.getMilliseconds(), 3);
-    const filename = `memo-${dateStr}-${timeStr}-${ms}.md`;
+    const rand = Math.random().toString(36).slice(2, 6);
+    const filename = `memo-${dateStr}-${timeStr}-${ms}-${rand}.md`;
     const allTags = [];
     if (this.settings.useFixedTag && this.settings.fixedTag) {
       allTags.push(this.settings.fixedTag.replace(/^#+/, ""));
     }
-    for (const t3 of tags) {
-      const clean = t3.replace(/^#+/, "");
+    for (const tag of tags) {
+      const clean = tag.replace(/^#+/, "");
       if (clean && !allTags.includes(clean)) {
         allTags.push(clean);
       }

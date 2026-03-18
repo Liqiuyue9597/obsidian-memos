@@ -116,17 +116,19 @@ export class MemosView extends ItemView {
       (f): f is TFile => f instanceof TFile && f.name.endsWith(".md")
     );
 
-    const results: MemoNote[] = [];
+    // Parallel read for better performance with many files
+    const results = (
+      await Promise.all(
+        files.map(async (file) => {
+          const cache = this.app.metadataCache.getFileCache(file);
+          const fm = cache?.frontmatter;
+          if (!fm || fm["type"] !== "memo") return null;
 
-    for (const file of files) {
-      const cache = this.app.metadataCache.getFileCache(file);
-      const fm = cache?.frontmatter;
-      if (!fm || fm["type"] !== "memo") continue;
-
-      const raw = await this.app.vault.read(file);
-      const memo = this.parseMemo(file, raw, fm, cache);
-      results.push(memo);
-    }
+          const raw = await this.app.vault.read(file);
+          return this.parseMemo(file, raw, fm, cache);
+        })
+      )
+    ).filter((m): m is MemoNote => m !== null);
 
     results.sort((a, b) => b.created.localeCompare(a.created));
     this.memos = results;
@@ -144,9 +146,9 @@ export class MemosView extends ItemView {
     const created =
       typeof fm["created"] === "string"
         ? fm["created"]
-        : file.stat.ctime
-        ? new Date(file.stat.ctime).toISOString()
-        : new Date().toISOString();
+        : (file.stat.ctime
+          ? new Date(file.stat.ctime).toISOString()
+          : new Date().toISOString());
 
     const dateLabel = created.slice(0, 10);
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { extractInlineTags, escapeHtmlAttr, parseTags } from "../src/utils";
+import { extractInlineTags, parseTags } from "../src/utils";
 
 // ---------------------------------------------------------------------------
 // extractInlineTags
@@ -39,45 +39,6 @@ describe("extractInlineTags", () => {
 
   it("handles multiple tags on same line", () => {
     expect(extractInlineTags("#a #b #c")).toEqual(["a", "b", "c"]);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// escapeHtmlAttr
-// ---------------------------------------------------------------------------
-describe("escapeHtmlAttr", () => {
-  it("escapes ampersand", () => {
-    expect(escapeHtmlAttr("a&b")).toBe("a&amp;b");
-  });
-
-  it("escapes double quotes", () => {
-    expect(escapeHtmlAttr('a"b')).toBe("a&quot;b");
-  });
-
-  it("escapes single quotes", () => {
-    expect(escapeHtmlAttr("a'b")).toBe("a&#39;b");
-  });
-
-  it("escapes less-than", () => {
-    expect(escapeHtmlAttr("a<b")).toBe("a&lt;b");
-  });
-
-  it("escapes greater-than", () => {
-    expect(escapeHtmlAttr("a>b")).toBe("a&gt;b");
-  });
-
-  it("escapes all special chars together", () => {
-    expect(escapeHtmlAttr('<script>"alert&\'test')).toBe(
-      "&lt;script&gt;&quot;alert&amp;&#39;test"
-    );
-  });
-
-  it("returns unchanged string with no special chars", () => {
-    expect(escapeHtmlAttr("hello world")).toBe("hello world");
-  });
-
-  it("handles empty string", () => {
-    expect(escapeHtmlAttr("")).toBe("");
   });
 });
 

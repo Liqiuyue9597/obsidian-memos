@@ -1,4 +1,4 @@
-import { App, Notice, normalizePath, TFile } from "obsidian";
+import { App, Notice, normalizePath, TFile, TFolder } from "obsidian";
 import { extractInlineTags } from "./utils";
 import { i18n } from "./i18n";
 
@@ -14,7 +14,7 @@ import { i18n } from "./i18n";
  *   </div>
  */
 
-interface FlomoMemo {
+export interface FlomoMemo {
   time: string;       // "YYYY-MM-DD HH:mm:ss"
   content: string;    // markdown body
   tags: string[];     // extracted #tags
@@ -96,15 +96,10 @@ function parseFlomoHtml(html: string): FlomoMemo[] {
 }
 
 /** Build a memo .md file content string from a parsed Flomo memo. */
-function buildMemoFile(memo: FlomoMemo): string {
-  // Parse time → ISO string
-  let iso: string;
-  try {
-    const d = new Date(memo.time.replace(" ", "T"));
-    iso = isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
-  } catch {
-    iso = new Date().toISOString();
-  }
+export function buildMemoFile(memo: FlomoMemo): string {
+  // Parse time → ISO string (Date constructor never throws; check via isNaN)
+  const d = new Date(memo.time.replace(" ", "T"));
+  const iso = isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
 
   const tagYaml =
     memo.tags.length > 0
@@ -123,7 +118,7 @@ function buildMemoFile(memo: FlomoMemo): string {
 }
 
 /** Build a unique filename from a Flomo memo timestamp. */
-function buildFilename(time: string, index: number): string {
+export function buildFilename(time: string, index: number): string {
   // "2024-01-15 14:30:22" → "memo-2024-01-15-14-30-22.md"
   const cleaned = time
     .replace(/[:\s]/g, "-")
@@ -160,10 +155,13 @@ export async function importFlomoHtml(
   }
 
   let imported = 0;
+  const folderObj = app.vault.getAbstractFileByPath(folder);
   const existingFiles = new Set(
-    (app.vault.getAbstractFileByPath(folder) as any)?.children
-      ?.filter((f: any) => f instanceof TFile)
-      ?.map((f: TFile) => f.name) ?? []
+    folderObj instanceof TFolder
+      ? folderObj.children
+          .filter((f): f is TFile => f instanceof TFile)
+          .map((f) => f.name)
+      : []
   );
 
   for (let i = 0; i < memos.length; i++) {

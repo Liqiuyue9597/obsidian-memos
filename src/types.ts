@@ -19,7 +19,7 @@ export interface MemoStats {
 }
 
 export interface MemosSettings {
-  saveFolder: string;        // default: "00-Inbox"
+  saveFolder: string;        // default: "Memos"
   useFixedTag: boolean;      // default: false
   fixedTag: string;          // default: ""
   statsCollapsed: boolean;   // default: false
@@ -33,7 +33,7 @@ export interface MemosSettings {
 }
 
 export const DEFAULT_SETTINGS: MemosSettings = {
-  saveFolder: "00-Inbox",
+  saveFolder: "Memos",
   useFixedTag: false,
   fixedTag: "",
   statsCollapsed: false,
