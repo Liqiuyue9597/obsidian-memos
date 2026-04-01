@@ -4,7 +4,7 @@
 
 **Flomo-style quick capture for Obsidian**
 
-[![Latest Release](https://img.shields.io/github/release/Liqiuyue9597/obsidian-memos.svg)](https://github.com/Liqiuyue9597/obsidian-memos/releases)
+[![Latest Release](https://img.shields.io/github/release/Liqiuyue9597/quick-memos.svg)](https://github.com/Liqiuyue9597/quick-memos/releases)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 **🌐 English | [中文](README.md)**
@@ -38,36 +38,38 @@ Primarily designed as a mobile-friendly 📱 inspiration capture plugin, with di
 ### Manual Install
 
 ```bash
-git clone https://github.com/Liqiuyue9597/obsidian-memos.git
-cd obsidian-memos
+git clone https://github.com/Liqiuyue9597/quick-memos.git
+cd quick-memos
 npm install
 npm run build
 ```
 
-Copy `main.js`, `manifest.json`, and `styles.css` into your vault:
+Copy `main.js`, `manifest.json`, and `styles.css` into your vault, and make sure the plugin folder name is `quick-memos`:
 
 ```
-<your-vault>/.obsidian/plugins/obsidian-memos/
+<your-vault>/.obsidian/plugins/quick-memos/
 ```
 
 Or symlink (recommended for development):
 
 ```bash
 # macOS / Linux
-ln -s /path/to/obsidian-memos /path/to/vault/.obsidian/plugins/obsidian-memos
+ln -s /path/to/quick-memos /path/to/vault/.obsidian/plugins/quick-memos
 
 # Windows (PowerShell as Admin)
 New-Item -ItemType SymbolicLink `
-  -Path "C:\vault\.obsidian\plugins\obsidian-memos" `
-  -Target "C:\obsidian-memos"
+  -Path "C:\vault\.obsidian\plugins\quick-memos" `
+  -Target "C:\quick-memos"
 ```
+
+> If the plugin is not recognized on mobile, double-check that the folder name is `quick-memos`.
 
 Enable in Obsidian: **Settings → Community plugins → Enable Quick Memos**
 
 ### Using BRAT
 
 1. Install [BRAT](https://github.com/TfTHacker/obsidian42-brat) plugin
-2. BRAT → **Add a beta plugin** → enter `https://github.com/Liqiuyue9597/obsidian-memos`
+2. BRAT → **Add a beta plugin** → enter `https://github.com/Liqiuyue9597/quick-memos`
 3. Click **Add Plugin**
 
 ---

@@ -4,7 +4,7 @@
 
 **像 Flomo 一样，在 Obsidian 里随手记录灵感**
 
-[![Latest Release](https://img.shields.io/github/release/Liqiuyue9597/obsidian-memos.svg)](https://github.com/Liqiuyue9597/obsidian-memos/releases)
+[![Latest Release](https://img.shields.io/github/release/Liqiuyue9597/quick-memos.svg)](https://github.com/Liqiuyue9597/quick-memos/releases)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 **🌐 [English](README.en.md) | 中文**
@@ -39,36 +39,38 @@ Quick Memos 是一个 Obsidian 插件，让你在笔记库里像用 Flomo 一样
 ### 手动安装
 
 ```bash
-git clone https://github.com/Liqiuyue9597/obsidian-memos.git
-cd obsidian-memos
+git clone https://github.com/Liqiuyue9597/quick-memos.git
+cd quick-memos
 npm install
 npm run build
 ```
 
-将 `main.js`、`manifest.json`、`styles.css` 复制到你的 vault：
+将 `main.js`、`manifest.json`、`styles.css` 复制到你的 vault，并确保插件文件夹名是 `quick-memos`：
 
 ```
-<你的vault>/.obsidian/plugins/obsidian-memos/
+<你的vault>/.obsidian/plugins/quick-memos/
 ```
 
 或者用软链接（开发时推荐）：
 
 ```bash
 # macOS / Linux
-ln -s /path/to/obsidian-memos /path/to/vault/.obsidian/plugins/obsidian-memos
+ln -s /path/to/quick-memos /path/to/vault/.obsidian/plugins/quick-memos
 
 # Windows (PowerShell 管理员)
 New-Item -ItemType SymbolicLink `
-  -Path "C:\vault\.obsidian\plugins\obsidian-memos" `
-  -Target "C:\obsidian-memos"
+  -Path "C:\vault\.obsidian\plugins\quick-memos" `
+  -Target "C:\quick-memos"
 ```
+
+> 手机端如果识别不到社区插件，先检查这个目录名是否已经改成 `quick-memos`。
 
 在 Obsidian 中启用：**设置 → 社区插件 → 启用 Quick Memos**
 
 ### 使用 BRAT
 
 1. 安装 [BRAT](https://github.com/TfTHacker/obsidian42-brat) 插件
-2. BRAT → **Add a beta plugin** → 输入 `https://github.com/Liqiuyue9597/obsidian-memos`
+2. BRAT → **Add a beta plugin** → 输入 `https://github.com/Liqiuyue9597/quick-memos`
 3. 点击 **Add Plugin**
 
 ---
