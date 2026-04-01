@@ -97,6 +97,7 @@ export class CaptureItemView extends ItemView {
   }
 
   async onOpen() {
+    await Promise.resolve();
     const container = this.contentEl;
     container.empty();
     container.addClass("memos-capture-card-container");
@@ -107,9 +108,10 @@ export class CaptureItemView extends ItemView {
       attr: { "aria-label": i18n.back },
     });
     setIcon(closeBtn, "arrow-left");
-    closeBtn.addEventListener("click", async () => {
-      await this.plugin.activateView();
-      this.leaf.detach();
+    closeBtn.addEventListener("click", () => {
+      void this.plugin.activateView().then(() => {
+        this.leaf.detach();
+      });
     });
 
     // ── Card ──
@@ -210,14 +212,14 @@ export class CaptureItemView extends ItemView {
       text: i18n.saveMemo,
     });
     saveBtn.addEventListener("click", () => {
-      this.handleSave();
+      void this.handleSave();
     });
 
     // ── Keyboard shortcut: Ctrl/Cmd + Enter to save ──
     container.addEventListener("keydown", (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
         e.preventDefault();
-        this.handleSave();
+        void this.handleSave();
       }
     });
 
@@ -226,6 +228,7 @@ export class CaptureItemView extends ItemView {
   }
 
   async onClose() {
+    await Promise.resolve();
     this.contentEl.empty();
   }
 

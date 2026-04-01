@@ -3,7 +3,6 @@ import {
   Notice,
   Platform,
   Plugin,
-  TFile,
   normalizePath,
 } from "obsidian";
 
@@ -13,7 +12,7 @@ import { MemosView } from "./view";
 import { CaptureItemView } from "./capture-view";
 import { MemosSettingTab } from "./settings";
 import { extractInlineTags } from "./utils";
-import { i18n, t } from "./i18n";
+import { i18n } from "./i18n";
 
 export default class MemosPlugin extends Plugin {
   settings!: MemosSettings;
@@ -27,14 +26,14 @@ export default class MemosPlugin extends Plugin {
     // Ribbon icon → open Memos view (fullscreen on mobile)
     addIcon("quick-memos", `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="14" width="50" height="68" rx="6"/><line x1="20" y1="34" x2="44" y2="34"/><line x1="20" y1="46" x2="38" y2="46"/><line x1="20" y1="58" x2="42" y2="58"/><rect x="70" y="14" width="14" height="52" rx="3"/><path d="M70 66l7 14 7-14" fill="currentColor"/><line x1="70" y1="24" x2="84" y2="24" stroke-width="4"/></svg>`);
     this.addRibbonIcon("quick-memos", i18n.openMemosView, () => {
-      this.activateView();
+      void this.activateView();
     });
 
     this.addCommand({
       id: "open-memos-capture",
       name: i18n.quickCapture,
       callback: () => {
-        this.activateCaptureView();
+        void this.activateCaptureView();
       },
     });
 
@@ -42,7 +41,7 @@ export default class MemosPlugin extends Plugin {
       id: "open-memos-view",
       name: i18n.openMemosView,
       callback: () => {
-        this.activateView();
+        void this.activateView();
       },
     });
 
@@ -74,10 +73,10 @@ export default class MemosPlugin extends Plugin {
     // ── URI handler: obsidian://memo-view → open Memos view ──
     this.registerObsidianProtocolHandler("memo-view", () => {
       if (this.app.workspace.layoutReady) {
-        this.activateView();
+        void this.activateView();
       } else {
         this.app.workspace.onLayoutReady(() => {
-          this.activateView();
+          void this.activateView();
         });
       }
     });
@@ -132,7 +131,7 @@ export default class MemosPlugin extends Plugin {
 
     this.app.workspace.onLayoutReady(() => {
       if (Platform.isMobile) {
-        this.activateView();
+        void this.activateView();
       }
     });
   }
@@ -145,18 +144,18 @@ export default class MemosPlugin extends Plugin {
   async activateCaptureView() {
     const leaf = this.app.workspace.getLeaf("tab");
     await leaf.setViewState({ type: VIEW_TYPE_CAPTURE, active: true });
-    this.app.workspace.revealLeaf(leaf);
+    void this.app.workspace.revealLeaf(leaf);
   }
 
   async activateView() {
     const existing = this.app.workspace.getLeavesOfType(VIEW_TYPE_MEMOS);
     if (existing.length > 0) {
-      this.app.workspace.revealLeaf(existing[0]);
+      void this.app.workspace.revealLeaf(existing[0]);
       return;
     }
     const leaf = this.app.workspace.getLeaf("tab");
     await leaf.setViewState({ type: VIEW_TYPE_MEMOS, active: true });
-    this.app.workspace.revealLeaf(leaf);
+    void this.app.workspace.revealLeaf(leaf);
   }
 
   async saveMemo(content: string, tags: string[], meta?: { mood?: string; source?: string }): Promise<string> {
@@ -235,7 +234,7 @@ export default class MemosPlugin extends Plugin {
   }
 
   async loadSettings() {
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, (await this.loadData()) as Partial<MemosSettings>);
   }
 
   async saveSettings() {

@@ -9,7 +9,6 @@ import {
 
 import { VIEW_TYPE_MEMOS, INLINE_TAG_RE, WIKILINK_RE } from "./constants";
 import { MemoNote } from "./types";
-import { extractInlineTags } from "./utils";
 import { parseMemoContent } from "./memo-parser";
 import { computeStats, renderStatsSection } from "./stats";
 import type MemosPlugin from "./plugin";
@@ -48,7 +47,7 @@ export class MemosView extends ItemView {
     if (this.refreshTimer) clearTimeout(this.refreshTimer);
     this.refreshTimer = setTimeout(() => {
       this.refreshTimer = null;
-      this.refresh();
+      void this.refresh();
     }, 300);
   }
 
@@ -80,7 +79,7 @@ export class MemosView extends ItemView {
               return viewFile?.path === file.path;
             });
           if (hasOpenLeaf) {
-            this.plugin.activateView();
+            void this.plugin.activateView();
           }
           this.debouncedRefresh();
         }
@@ -99,6 +98,7 @@ export class MemosView extends ItemView {
   }
 
   async onClose() {
+    await Promise.resolve();
     if (this.refreshTimer) {
       clearTimeout(this.refreshTimer);
       this.refreshTimer = null;
@@ -217,7 +217,7 @@ export class MemosView extends ItemView {
       const x = pill.createSpan({ cls: "memos-filter-clear", text: " ×" });
       x.addEventListener("click", () => {
         this.activeTag = null;
-        this.refresh();
+        void this.refresh();
       });
     }
 
@@ -227,7 +227,7 @@ export class MemosView extends ItemView {
       const x = pill.createSpan({ cls: "memos-filter-clear", text: " ×" });
       x.addEventListener("click", () => {
         this.activeDateFilter = null;
-        this.refresh();
+        void this.refresh();
       });
     }
 
@@ -239,7 +239,7 @@ export class MemosView extends ItemView {
     });
     setIcon(captureBtn, "pencil");
     captureBtn.addEventListener("click", () => {
-      this.plugin.activateCaptureView();
+      void this.plugin.activateCaptureView();
     });
 
     const randomBtn = right.createDiv({
@@ -258,7 +258,7 @@ export class MemosView extends ItemView {
     setIcon(canvasBtn, "layout-dashboard");
     canvasBtn.addEventListener("click", () => {
       const filtered = this.getFilteredMemos();
-      exportToCanvas(this.app, filtered);
+      void exportToCanvas(this.app, filtered);
     });
   }
 
@@ -422,7 +422,7 @@ export class MemosView extends ItemView {
         linkSpan.dataset["href"] = match.linkPath;
         linkSpan.addEventListener("click", (e) => {
           e.stopPropagation();
-          this.app.workspace.openLinkText(match.linkPath!, "", false);
+          void this.app.workspace.openLinkText(match.linkPath!, "", false);
         });
         linkSpan.addEventListener("mouseover", (e: MouseEvent) => {
           this.app.workspace.trigger("hover-link", {
@@ -479,7 +479,7 @@ export class MemosView extends ItemView {
     } else {
       this.activeTag = this.activeTag === tag ? null : tag;
     }
-    this.refresh();
+    void this.refresh();
   }
 
   /** Return memos filtered by the currently active tag and date filters. */
@@ -508,9 +508,9 @@ export class MemosView extends ItemView {
     const idx = Math.floor(Math.random() * filtered.length);
     const target = filtered[idx];
 
-    const cardEl = this.contentEl.querySelector(
+    const cardEl = this.contentEl.querySelector<HTMLElement>(
       `[data-path="${CSS.escape(target.file.path)}"]`
-    ) as HTMLElement | null;
+    );
 
     if (cardEl) {
       cardEl.addClass("memos-card-highlighted");
@@ -521,13 +521,13 @@ export class MemosView extends ItemView {
 
   handleDateFilter(date: string) {
     this.activeDateFilter = this.activeDateFilter === date ? null : date;
-    this.refresh();
+    void this.refresh();
   }
 
   handleStatsToggle() {
     this.plugin.settings.statsCollapsed = !this.plugin.settings.statsCollapsed;
-    this.plugin.saveSettings();
-    this.refresh();
+    void this.plugin.saveSettings();
+    void this.refresh();
   }
 
   openMemo(file: TFile) {
@@ -538,10 +538,10 @@ export class MemosView extends ItemView {
     });
 
     if (existing) {
-      this.app.workspace.revealLeaf(existing);
+      void this.app.workspace.revealLeaf(existing);
     } else {
       const leaf = this.app.workspace.getLeaf("tab");
-      leaf.openFile(file);
+      void leaf.openFile(file);
     }
   }
 }

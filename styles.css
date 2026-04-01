@@ -1269,3 +1269,24 @@
     0 1px 3px rgba(0, 0, 0, 0.3),
     0 0 0 1px rgba(255, 255, 255, 0.04) !important;
 }
+
+/* Export preview image (used in export card DOM preview) */
+.memos-export-preview-image {
+  max-width: 384px;
+  max-height: 300px;
+  border-radius: 6px;
+  display: block;
+  margin: 8px auto;
+}
+
+/* Export card scaling (mobile responsive) */
+.memos-export-card-scaled {
+  transform: scale(var(--export-card-scale, 1));
+  transform-origin: top left;
+}
+
+.memos-export-card-wrapper-scaled {
+  width: var(--export-wrapper-width, auto);
+  height: var(--export-wrapper-height, auto);
+  overflow: hidden;
+}

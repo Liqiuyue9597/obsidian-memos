@@ -67,7 +67,7 @@ function extractInlineTags(text) {
   return tags;
 }
 function parseTags(input) {
-  return input.split(/[\s,，]+/).map((t3) => t3.replace(/^#+/, "").trim()).filter((t3) => t3.length > 0);
+  return input.split(/[\s,，]+/).map((t2) => t2.replace(/^#+/, "").trim()).filter((t2) => t2.length > 0);
 }
 
 // src/memo-parser.ts
@@ -84,9 +84,9 @@ function parseMemoContent(raw, fm, frontmatterEndOffset) {
   const inlineTags = extractInlineTags(body);
   const fmTags = [];
   if (Array.isArray(fm["tags"])) {
-    for (const t3 of fm["tags"]) {
-      if (typeof t3 === "string")
-        fmTags.push(t3);
+    for (const t2 of fm["tags"]) {
+      if (typeof t2 === "string")
+        fmTags.push(t2);
     }
   }
   const tags = Array.from(/* @__PURE__ */ new Set([...fmTags, ...inlineTags]));
@@ -259,12 +259,13 @@ var zh = {
   noMemosInHtml: "HTML \u6587\u4EF6\u4E2D\u672A\u627E\u5230 memo\u3002"
 };
 function t(key, vars) {
-  let val = i18n[key];
-  if (typeof val !== "string")
+  const raw = i18n[key];
+  if (typeof raw !== "string")
     return key;
+  let val = raw;
   if (vars) {
     for (const [k, v] of Object.entries(vars)) {
-      val = val.replaceAll(`\${${k}}`, String(v));
+      val = val.replace(new RegExp(`\\$\\{${k}\\}`, "g"), String(v));
     }
   }
   return val;
@@ -745,11 +746,7 @@ async function buildExportCard(app, memo, options) {
       const url = URL.createObjectURL(blob);
       const imgEl = document.createElement("img");
       imgEl.src = url;
-      imgEl.style.maxWidth = `${IMAGE_MAX_WIDTH}px`;
-      imgEl.style.maxHeight = `${IMAGE_MAX_HEIGHT}px`;
-      imgEl.style.borderRadius = "6px";
-      imgEl.style.display = "block";
-      imgEl.style.margin = "8px auto";
+      imgEl.className = "memos-export-preview-image";
       card.appendChild(imgEl);
     } catch (e) {
     }
@@ -812,12 +809,16 @@ var ExportModal = class extends import_obsidian3.Modal {
       const cardWidth = 440;
       if (containerWidth > 0 && containerWidth < cardWidth) {
         const scale = containerWidth / cardWidth;
-        cardEl.style.transform = `scale(${scale})`;
-        cardEl.style.transformOrigin = "top left";
         const cardHeight = cardEl.offsetHeight;
-        cardWrapper.style.width = `${cardWidth * scale}px`;
-        cardWrapper.style.height = `${cardHeight * scale}px`;
-        cardWrapper.style.overflow = "hidden";
+        cardEl.setCssProps({
+          "--export-card-scale": String(scale)
+        });
+        cardEl.addClass("memos-export-card-scaled");
+        cardWrapper.setCssProps({
+          "--export-wrapper-width": `${cardWidth * scale}px`,
+          "--export-wrapper-height": `${cardHeight * scale}px`
+        });
+        cardWrapper.addClass("memos-export-card-wrapper-scaled");
       }
     }, 50);
     const btnRow = contentEl.createDiv("memos-export-btn-row");
@@ -825,12 +826,16 @@ var ExportModal = class extends import_obsidian3.Modal {
       cls: "memos-export-btn mod-cta",
       text: i18n.saveAsPng
     });
-    saveBtn.addEventListener("click", () => this.handleSave(isDarkMode));
+    saveBtn.addEventListener("click", () => {
+      void this.handleSave(isDarkMode);
+    });
     const copyBtn = btnRow.createEl("button", {
       cls: "memos-export-btn",
       text: i18n.copyToClipboard
     });
-    copyBtn.addEventListener("click", () => this.handleCopy(isDarkMode));
+    copyBtn.addEventListener("click", () => {
+      void this.handleCopy(isDarkMode);
+    });
   }
   /** Build filename from memo date. */
   buildFilename() {
@@ -983,7 +988,7 @@ var _MemosView = class extends import_obsidian5.ItemView {
       clearTimeout(this.refreshTimer);
     this.refreshTimer = setTimeout(() => {
       this.refreshTimer = null;
-      this.refresh();
+      void this.refresh();
     }, 300);
   }
   async onOpen() {
@@ -1004,7 +1009,7 @@ var _MemosView = class extends import_obsidian5.ItemView {
             return (viewFile == null ? void 0 : viewFile.path) === file.path;
           });
           if (hasOpenLeaf) {
-            this.plugin.activateView();
+            void this.plugin.activateView();
           }
           this.debouncedRefresh();
         }
@@ -1018,6 +1023,7 @@ var _MemosView = class extends import_obsidian5.ItemView {
     );
   }
   async onClose() {
+    await Promise.resolve();
     if (this.refreshTimer) {
       clearTimeout(this.refreshTimer);
       this.refreshTimer = null;
@@ -1098,7 +1104,7 @@ var _MemosView = class extends import_obsidian5.ItemView {
       const x = pill.createSpan({ cls: "memos-filter-clear", text: " \xD7" });
       x.addEventListener("click", () => {
         this.activeTag = null;
-        this.refresh();
+        void this.refresh();
       });
     }
     if (this.activeDateFilter) {
@@ -1107,7 +1113,7 @@ var _MemosView = class extends import_obsidian5.ItemView {
       const x = pill.createSpan({ cls: "memos-filter-clear", text: " \xD7" });
       x.addEventListener("click", () => {
         this.activeDateFilter = null;
-        this.refresh();
+        void this.refresh();
       });
     }
     const right = el.createDiv("memos-toolbar-right");
@@ -1117,7 +1123,7 @@ var _MemosView = class extends import_obsidian5.ItemView {
     });
     (0, import_obsidian5.setIcon)(captureBtn, "pencil");
     captureBtn.addEventListener("click", () => {
-      this.plugin.activateCaptureView();
+      void this.plugin.activateCaptureView();
     });
     const randomBtn = right.createDiv({
       cls: "memos-toolbar-btn",
@@ -1134,7 +1140,7 @@ var _MemosView = class extends import_obsidian5.ItemView {
     (0, import_obsidian5.setIcon)(canvasBtn, "layout-dashboard");
     canvasBtn.addEventListener("click", () => {
       const filtered = this.getFilteredMemos();
-      exportToCanvas(this.app, filtered);
+      void exportToCanvas(this.app, filtered);
     });
   }
   renderCards(el) {
@@ -1256,7 +1262,7 @@ var _MemosView = class extends import_obsidian5.ItemView {
         linkSpan.dataset["href"] = match.linkPath;
         linkSpan.addEventListener("click", (e) => {
           e.stopPropagation();
-          this.app.workspace.openLinkText(match.linkPath, "", false);
+          void this.app.workspace.openLinkText(match.linkPath, "", false);
         });
         linkSpan.addEventListener("mouseover", (e) => {
           this.app.workspace.trigger("hover-link", {
@@ -1307,7 +1313,7 @@ var _MemosView = class extends import_obsidian5.ItemView {
     } else {
       this.activeTag = this.activeTag === tag ? null : tag;
     }
-    this.refresh();
+    void this.refresh();
   }
   /** Return memos filtered by the currently active tag and date filters. */
   getFilteredMemos() {
@@ -1341,12 +1347,12 @@ var _MemosView = class extends import_obsidian5.ItemView {
   }
   handleDateFilter(date) {
     this.activeDateFilter = this.activeDateFilter === date ? null : date;
-    this.refresh();
+    void this.refresh();
   }
   handleStatsToggle() {
     this.plugin.settings.statsCollapsed = !this.plugin.settings.statsCollapsed;
-    this.plugin.saveSettings();
-    this.refresh();
+    void this.plugin.saveSettings();
+    void this.refresh();
   }
   openMemo(file) {
     const existing = this.app.workspace.getLeavesOfType("markdown").find((leaf) => {
@@ -1354,10 +1360,10 @@ var _MemosView = class extends import_obsidian5.ItemView {
       return (viewFile == null ? void 0 : viewFile.path) === file.path;
     });
     if (existing) {
-      this.app.workspace.revealLeaf(existing);
+      void this.app.workspace.revealLeaf(existing);
     } else {
       const leaf = this.app.workspace.getLeaf("tab");
-      leaf.openFile(file);
+      void leaf.openFile(file);
     }
   }
 };
@@ -1432,6 +1438,7 @@ var CaptureItemView = class extends import_obsidian6.ItemView {
     return "pencil";
   }
   async onOpen() {
+    await Promise.resolve();
     const container = this.contentEl;
     container.empty();
     container.addClass("memos-capture-card-container");
@@ -1440,9 +1447,10 @@ var CaptureItemView = class extends import_obsidian6.ItemView {
       attr: { "aria-label": i18n.back }
     });
     (0, import_obsidian6.setIcon)(closeBtn, "arrow-left");
-    closeBtn.addEventListener("click", async () => {
-      await this.plugin.activateView();
-      this.leaf.detach();
+    closeBtn.addEventListener("click", () => {
+      void this.plugin.activateView().then(() => {
+        this.leaf.detach();
+      });
     });
     const card = container.createDiv("memos-capture-card");
     const textareaWrap = card.createDiv("memos-capture-card-textarea-wrap");
@@ -1521,17 +1529,18 @@ var CaptureItemView = class extends import_obsidian6.ItemView {
       text: i18n.saveMemo
     });
     saveBtn.addEventListener("click", () => {
-      this.handleSave();
+      void this.handleSave();
     });
     container.addEventListener("keydown", (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
         e.preventDefault();
-        this.handleSave();
+        void this.handleSave();
       }
     });
     setTimeout(() => this.textarea.focus(), 100);
   }
   async onClose() {
+    await Promise.resolve();
     this.contentEl.empty();
   }
   // ── Tag pill UI ──────────────────────────────────────────
@@ -1546,7 +1555,7 @@ var CaptureItemView = class extends import_obsidian6.ItemView {
         text: "\xD7"
       });
       removeBtn.addEventListener("click", () => {
-        this.tags = this.tags.filter((t3) => t3 !== tag);
+        this.tags = this.tags.filter((t2) => t2 !== tag);
         this.renderTags();
       });
     }
@@ -1753,7 +1762,7 @@ function buildMemoFile(memo) {
   const d = new Date(memo.time.replace(" ", "T"));
   const iso = isNaN(d.getTime()) ? (/* @__PURE__ */ new Date()).toISOString() : d.toISOString();
   const tagYaml = memo.tags.length > 0 ? `tags:
-${memo.tags.map((t3) => `  - ${t3}`).join("\n")}` : "tags: []";
+${memo.tags.map((t2) => `  - ${t2}`).join("\n")}` : "tags: []";
   const frontmatter = `---
 created: ${iso}
 type: memo
@@ -1833,7 +1842,7 @@ var MemosSettingTab = class extends import_obsidian8.PluginSettingTab {
     );
     if (this.plugin.settings.useFixedTag) {
       new import_obsidian8.Setting(containerEl).setName(i18n.fixedTagValue).setDesc(i18n.fixedTagValueDesc).addText(
-        (text) => text.setPlaceholder("memo").setValue(this.plugin.settings.fixedTag).onChange(async (value) => {
+        (text) => text.setPlaceholder("Memo").setValue(this.plugin.settings.fixedTag).onChange(async (value) => {
           this.plugin.settings.fixedTag = value.trim().replace(/^#+/, "");
           await this.plugin.saveSettings();
         })
@@ -1864,7 +1873,7 @@ var MemosSettingTab = class extends import_obsidian8.PluginSettingTab {
     );
     if (this.plugin.settings.enableSource) {
       new import_obsidian8.Setting(containerEl).setName(i18n.sourceOptions).setDesc(i18n.sourceOptionsDesc).addText(
-        (text) => text.setPlaceholder("thought, kindle, web, conversation, podcast").setValue(this.plugin.settings.sourceOptions.join(", ")).onChange(async (value) => {
+        (text) => text.setPlaceholder("Thought, kindle, web, conversation, podcast").setValue(this.plugin.settings.sourceOptions.join(", ")).onChange(async (value) => {
           this.plugin.settings.sourceOptions = value.split(",").map((s) => s.trim()).filter(Boolean);
           await this.plugin.saveSettings();
         })
@@ -1898,29 +1907,31 @@ var MemosSettingTab = class extends import_obsidian8.PluginSettingTab {
         const input = document.createElement("input");
         input.type = "file";
         input.accept = ".html,.htm";
-        input.addEventListener("change", async () => {
+        input.addEventListener("change", () => {
           var _a;
           const file = (_a = input.files) == null ? void 0 : _a[0];
           if (!file)
             return;
           new import_obsidian8.Notice(t("readingFile", { name: file.name }));
-          try {
-            const html = await file.text();
-            const count = await importFlomoHtml(
-              this.app,
-              html,
-              this.plugin.settings.saveFolder
-            );
-            if (count > 0) {
-              new import_obsidian8.Notice(t("importSuccess", { count }));
-            } else {
-              new import_obsidian8.Notice(i18n.importNoNew);
+          void (async () => {
+            try {
+              const html = await file.text();
+              const count = await importFlomoHtml(
+                this.app,
+                html,
+                this.plugin.settings.saveFolder
+              );
+              if (count > 0) {
+                new import_obsidian8.Notice(t("importSuccess", { count }));
+              } else {
+                new import_obsidian8.Notice(i18n.importNoNew);
+              }
+            } catch (err) {
+              new import_obsidian8.Notice(
+                t("importFailed", { err: err instanceof Error ? err.message : String(err) })
+              );
             }
-          } catch (err) {
-            new import_obsidian8.Notice(
-              t("importFailed", { err: err instanceof Error ? err.message : String(err) })
-            );
-          }
+          })();
         });
         input.click();
       })
@@ -1936,20 +1947,20 @@ var MemosPlugin = class extends import_obsidian9.Plugin {
     this.registerView(VIEW_TYPE_CAPTURE, (leaf) => new CaptureItemView(leaf, this));
     (0, import_obsidian9.addIcon)("quick-memos", `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="14" width="50" height="68" rx="6"/><line x1="20" y1="34" x2="44" y2="34"/><line x1="20" y1="46" x2="38" y2="46"/><line x1="20" y1="58" x2="42" y2="58"/><rect x="70" y="14" width="14" height="52" rx="3"/><path d="M70 66l7 14 7-14" fill="currentColor"/><line x1="70" y1="24" x2="84" y2="24" stroke-width="4"/></svg>`);
     this.addRibbonIcon("quick-memos", i18n.openMemosView, () => {
-      this.activateView();
+      void this.activateView();
     });
     this.addCommand({
       id: "open-memos-capture",
       name: i18n.quickCapture,
       callback: () => {
-        this.activateCaptureView();
+        void this.activateCaptureView();
       }
     });
     this.addCommand({
       id: "open-memos-view",
       name: i18n.openMemosView,
       callback: () => {
-        this.activateView();
+        void this.activateView();
       }
     });
     this.addSettingTab(new MemosSettingTab(this.app, this));
@@ -1972,10 +1983,10 @@ var MemosPlugin = class extends import_obsidian9.Plugin {
     });
     this.registerObsidianProtocolHandler("memo-view", () => {
       if (this.app.workspace.layoutReady) {
-        this.activateView();
+        void this.activateView();
       } else {
         this.app.workspace.onLayoutReady(() => {
-          this.activateView();
+          void this.activateView();
         });
       }
     });
@@ -2014,7 +2025,7 @@ var MemosPlugin = class extends import_obsidian9.Plugin {
     });
     this.app.workspace.onLayoutReady(() => {
       if (import_obsidian9.Platform.isMobile) {
-        this.activateView();
+        void this.activateView();
       }
     });
   }
@@ -2023,17 +2034,17 @@ var MemosPlugin = class extends import_obsidian9.Plugin {
   async activateCaptureView() {
     const leaf = this.app.workspace.getLeaf("tab");
     await leaf.setViewState({ type: VIEW_TYPE_CAPTURE, active: true });
-    this.app.workspace.revealLeaf(leaf);
+    void this.app.workspace.revealLeaf(leaf);
   }
   async activateView() {
     const existing = this.app.workspace.getLeavesOfType(VIEW_TYPE_MEMOS);
     if (existing.length > 0) {
-      this.app.workspace.revealLeaf(existing[0]);
+      void this.app.workspace.revealLeaf(existing[0]);
       return;
     }
     const leaf = this.app.workspace.getLeaf("tab");
     await leaf.setViewState({ type: VIEW_TYPE_MEMOS, active: true });
-    this.app.workspace.revealLeaf(leaf);
+    void this.app.workspace.revealLeaf(leaf);
   }
   async saveMemo(content, tags, meta) {
     const now = /* @__PURE__ */ new Date();
@@ -2055,7 +2066,7 @@ var MemosPlugin = class extends import_obsidian9.Plugin {
       }
     }
     const tagYaml = allTags.length > 0 ? `tags:
-${allTags.map((t3) => `  - ${t3}`).join("\n")}` : "tags: []";
+${allTags.map((t2) => `  - ${t2}`).join("\n")}` : "tags: []";
     let extraYaml = "";
     if (meta == null ? void 0 : meta.mood)
       extraYaml += `mood: "${meta.mood}"

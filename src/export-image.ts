@@ -491,11 +491,7 @@ export async function buildExportCard(
       const url = URL.createObjectURL(blob);
       const imgEl = document.createElement("img");
       imgEl.src = url;
-      imgEl.style.maxWidth = `${IMAGE_MAX_WIDTH}px`;
-      imgEl.style.maxHeight = `${IMAGE_MAX_HEIGHT}px`;
-      imgEl.style.borderRadius = "6px";
-      imgEl.style.display = "block";
-      imgEl.style.margin = "8px auto";
+      imgEl.className = "memos-export-preview-image";
       card.appendChild(imgEl);
     } catch {
       // skip unreadable images
@@ -592,12 +588,16 @@ export class ExportModal extends Modal {
       const cardWidth = 440;
       if (containerWidth > 0 && containerWidth < cardWidth) {
         const scale = containerWidth / cardWidth;
-        cardEl.style.transform = `scale(${scale})`;
-        cardEl.style.transformOrigin = "top left";
         const cardHeight = cardEl.offsetHeight;
-        cardWrapper.style.width = `${cardWidth * scale}px`;
-        cardWrapper.style.height = `${cardHeight * scale}px`;
-        cardWrapper.style.overflow = "hidden";
+        cardEl.setCssProps({
+          "--export-card-scale": String(scale),
+        });
+        cardEl.addClass("memos-export-card-scaled");
+        cardWrapper.setCssProps({
+          "--export-wrapper-width": `${cardWidth * scale}px`,
+          "--export-wrapper-height": `${cardHeight * scale}px`,
+        });
+        cardWrapper.addClass("memos-export-card-wrapper-scaled");
       }
     }, 50);
 
@@ -608,13 +608,13 @@ export class ExportModal extends Modal {
       cls: "memos-export-btn mod-cta",
       text: i18n.saveAsPng,
     });
-    saveBtn.addEventListener("click", () => this.handleSave(isDarkMode));
+    saveBtn.addEventListener("click", () => { void this.handleSave(isDarkMode); });
 
     const copyBtn = btnRow.createEl("button", {
       cls: "memos-export-btn",
       text: i18n.copyToClipboard,
     });
-    copyBtn.addEventListener("click", () => this.handleCopy(isDarkMode));
+    copyBtn.addEventListener("click", () => { void this.handleCopy(isDarkMode); });
   }
 
   /** Build filename from memo date. */

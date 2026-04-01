@@ -279,14 +279,15 @@ const zh: Messages = {
 
 /** Helper: simple template string replacement. */
 export function t(key: string, vars?: Record<string, string | number>): string {
-  let val = (i18n as unknown as Record<string, unknown>)[key];
-  if (typeof val !== "string") return key;
+  const raw = (i18n as unknown as Record<string, unknown>)[key];
+  if (typeof raw !== "string") return key;
+  let val: string = raw;
   if (vars) {
     for (const [k, v] of Object.entries(vars)) {
-      val = (val as string).replaceAll(`\${${k}}`, String(v));
+      val = val.replace(new RegExp(`\\$\\{${k}\\}`, "g"), String(v));
     }
   }
-  return val as string;
+  return val;
 }
 
 function isChinese(): boolean {

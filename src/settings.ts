@@ -49,7 +49,7 @@ export class MemosSettingTab extends PluginSettingTab {
         .setDesc(i18n.fixedTagValueDesc)
         .addText((text) =>
           text
-            .setPlaceholder("memo")
+            .setPlaceholder("Memo")
             .setValue(this.plugin.settings.fixedTag)
             .onChange(async (value) => {
               this.plugin.settings.fixedTag = value.trim().replace(/^#+/, "");
@@ -110,7 +110,7 @@ export class MemosSettingTab extends PluginSettingTab {
         .setDesc(i18n.sourceOptionsDesc)
         .addText((text) =>
           text
-            .setPlaceholder("thought, kindle, web, conversation, podcast")
+            .setPlaceholder("Thought, kindle, web, conversation, podcast")
             .setValue(this.plugin.settings.sourceOptions.join(", "))
             .onChange(async (value) => {
               this.plugin.settings.sourceOptions = value
@@ -177,28 +177,30 @@ export class MemosSettingTab extends PluginSettingTab {
             const input = document.createElement("input");
             input.type = "file";
             input.accept = ".html,.htm";
-            input.addEventListener("change", async () => {
+            input.addEventListener("change", () => {
               const file = input.files?.[0];
               if (!file) return;
 
               new Notice(t("readingFile", { name: file.name }));
-              try {
-                const html = await file.text();
-                const count = await importFlomoHtml(
-                  this.app,
-                  html,
-                  this.plugin.settings.saveFolder
-                );
-                if (count > 0) {
-                  new Notice(t("importSuccess", { count }));
-                } else {
-                  new Notice(i18n.importNoNew);
+              void (async () => {
+                try {
+                  const html = await file.text();
+                  const count = await importFlomoHtml(
+                    this.app,
+                    html,
+                    this.plugin.settings.saveFolder
+                  );
+                  if (count > 0) {
+                    new Notice(t("importSuccess", { count }));
+                  } else {
+                    new Notice(i18n.importNoNew);
+                  }
+                } catch (err) {
+                  new Notice(
+                    t("importFailed", { err: err instanceof Error ? err.message : String(err) })
+                  );
                 }
-              } catch (err) {
-                new Notice(
-                  t("importFailed", { err: err instanceof Error ? err.message : String(err) })
-                );
-              }
+              })();
             });
             input.click();
           })
