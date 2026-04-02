@@ -328,7 +328,7 @@ export class CaptureItemView extends ItemView {
         this.app,
         this.plugin.settings.saveFolder,
         {
-          limit: 6,
+          limit: 4,
           excludedTags,
         }
       );
@@ -348,8 +348,7 @@ export class CaptureItemView extends ItemView {
     if (!selected) return;
 
     try {
-      const sourcePath = this.app.workspace.getActiveFile()?.path ?? "";
-      const attachmentPath = await saveImageAttachment(this.app, selected, sourcePath);
+      const attachmentPath = await saveImageAttachment(this.app, selected, this.plugin.settings.saveFolder);
       this.insertAtCursor(`![[${attachmentPath}]]`);
     } catch (err) {
       new Notice(

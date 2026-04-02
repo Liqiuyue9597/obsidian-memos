@@ -1,7 +1,5 @@
 import { App, TFile, TFolder, normalizePath } from "obsidian";
 
-import { parseMemoContent } from "./memo-parser";
-
 export interface TagUsage {
   tag: string;
   count: number;
@@ -17,11 +15,52 @@ function normalizeTag(tag: string): string {
   return tag.replace(/^#+/, "").trim();
 }
 
+function getFrontmatterTags(fm: Record<string, unknown>): string[] {
+  const raw = fm["tags"];
+  const tags: string[] = [];
+
+  const pushTag = (value: unknown) => {
+    if (typeof value !== "string") return;
+    const normalized = normalizeTag(value);
+    if (normalized) tags.push(normalized);
+  };
+
+  if (Array.isArray(raw)) {
+    for (const value of raw) {
+      pushTag(value);
+    }
+    return tags;
+  }
+
+  if (typeof raw === "string") {
+    for (const value of raw.split(/[\s,，]+/)) {
+      pushTag(value);
+    }
+  }
+
+  return tags;
+}
+
+function getMemoCreatedAt(fm: Record<string, unknown>, file: TFile): number {
+  const parsedCreated =
+    typeof fm["created"] === "string" ? Date.parse(fm["created"]) : NaN;
+
+  if (Number.isFinite(parsedCreated)) {
+    return parsedCreated;
+  }
+
+  if (Number.isFinite(file.stat.ctime)) {
+    return file.stat.ctime;
+  }
+
+  return Date.now();
+}
+
 /**
  * Rank tag suggestions by usage frequency, then by most recent use.
  * The resulting list is deduplicated and limited to the requested size.
  */
-export function rankTagSuggestions(usages: TagUsage[], limit = 6): string[] {
+export function rankTagSuggestions(usages: TagUsage[], limit = 4): string[] {
   return usages
     .slice()
     .sort((a, b) => {
@@ -53,42 +92,32 @@ export async function loadTagSuggestions(
     Array.from(options.excludedTags ?? [], (tag) => normalizeTag(tag)).filter(Boolean)
   );
   const usageMap = new Map<string, TagUsage>();
-  const limit = options.limit ?? 6;
+  const limit = options.limit ?? 4;
 
   const files = abstractFolder.children.filter(
     (child): child is TFile => child instanceof TFile && child.extension.toLowerCase() === "md"
   );
 
-  await Promise.all(
-    files.map(async (file) => {
-      const cache = app.metadataCache.getFileCache(file);
-      const fm = cache?.frontmatter;
-      if (!fm || fm["type"] !== "memo") return;
+  for (const file of files) {
+    const cache = app.metadataCache.getFileCache(file);
+    const fm = cache?.frontmatter;
+    if (!fm || fm["type"] !== "memo") continue;
 
-      const raw = await app.vault.read(file);
-      const { tags } = parseMemoContent(raw, fm, cache?.frontmatterPosition?.end?.offset);
-      const created =
-        typeof fm["created"] === "string"
-          ? Date.parse(fm["created"])
-          : Number.isFinite(file.stat.ctime)
-            ? file.stat.ctime
-            : Date.now();
+    const created = getMemoCreatedAt(fm, file);
+    const uniqueTags = new Set(
+      getFrontmatterTags(fm).filter((tag) => tag.length > 0 && !excluded.has(tag))
+    );
 
-      const uniqueTags = new Set(
-        tags.map(normalizeTag).filter((tag) => tag.length > 0 && !excluded.has(tag))
-      );
-
-      for (const tag of uniqueTags) {
-        const usage = usageMap.get(tag);
-        if (usage) {
-          usage.count += 1;
-          usage.lastUsed = Math.max(usage.lastUsed, created);
-        } else {
-          usageMap.set(tag, { tag, count: 1, lastUsed: created });
-        }
+    for (const tag of uniqueTags) {
+      const usage = usageMap.get(tag);
+      if (usage) {
+        usage.count += 1;
+        usage.lastUsed = Math.max(usage.lastUsed, created);
+      } else {
+        usageMap.set(tag, { tag, count: 1, lastUsed: created });
       }
-    })
-  );
+    }
+  }
 
   return rankTagSuggestions(Array.from(usageMap.values()), limit);
 }

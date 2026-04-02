@@ -33,6 +33,7 @@ function setupVaultWithMemos(
     created: string;
     body: string;
     tags?: string[];
+    ctime?: number;
     noFrontmatterCache?: boolean;
   }>
 ) {
@@ -45,6 +46,9 @@ function setupVaultWithMemos(
   for (const memo of memos) {
     const filePath = `${folder}/${memo.name}`;
     const file = createMemoFile(filePath, memo.name);
+    if (memo.ctime != null && Number.isFinite(memo.ctime)) {
+      file.stat.ctime = memo.ctime;
+    }
     const tagsYaml =
       memo.tags && memo.tags.length > 0
         ? `tags:\n${memo.tags.map((tag) => `  - ${tag}`).join("\n")}`
@@ -100,8 +104,9 @@ describe("rankTagSuggestions", () => {
 });
 
 describe("loadTagSuggestions", () => {
-  it("builds a unique suggestion list from memo history", async () => {
+  it("builds a unique suggestion list from memo history without reading file bodies", async () => {
     const app = new App();
+    const readSpy = vi.spyOn(app.vault, "read");
     setupVaultWithMemos(app, "Memos", [
       {
         name: "memo-1.md",
@@ -134,6 +139,7 @@ describe("loadTagSuggestions", () => {
     expect(suggestions[0]).toBe("frequent");
     expect(suggestions.indexOf("fresh")).toBeLessThan(suggestions.indexOf("older"));
     expect(new Set(suggestions).size).toBe(suggestions.length);
+    expect(readSpy).not.toHaveBeenCalled();
   });
 
   it("deduplicates repeated tags inside the same memo", async () => {
@@ -169,6 +175,31 @@ describe("loadTagSuggestions", () => {
     });
 
     expect(suggestions).toEqual(["other"]);
+  });
+
+  it("falls back to file ctime when created is invalid", async () => {
+    const app = new App();
+    setupVaultWithMemos(app, "Memos", [
+      {
+        name: "memo-1.md",
+        created: "not-a-date",
+        ctime: Date.parse("2026-03-20T10:00:00.000Z"),
+        tags: ["fresh"],
+        body: "Body",
+      },
+      {
+        name: "memo-2.md",
+        created: "2026-03-10T10:00:00.000Z",
+        ctime: Date.parse("2026-03-10T10:00:00.000Z"),
+        tags: ["older"],
+        body: "Body",
+      },
+    ]);
+
+    const suggestions = await loadTagSuggestions(app, "Memos", { limit: 6 });
+
+    expect(suggestions[0]).toBe("fresh");
+    expect(suggestions).toContain("older");
   });
 });
 

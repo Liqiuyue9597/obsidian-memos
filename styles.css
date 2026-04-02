@@ -511,7 +511,6 @@
 .memos-capture-card-tag-suggestion {
   background: var(--background-primary);
   color: var(--text-normal);
-  border-style: solid;
   cursor: pointer;
   font-weight: 500;
 }
