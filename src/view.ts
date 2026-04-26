@@ -15,6 +15,8 @@ import type MemosPlugin from "./plugin";
 import { ExportModal } from "./export-image";
 import { exportToCanvas } from "./canvas-export";
 import { i18n } from "./i18n";
+import { renderCognitiveMap } from "./cognitive-map";
+import { CognitiveMapExportModal } from "./cognitive-map-export";
 
 export class MemosView extends ItemView {
   plugin: MemosPlugin;
@@ -22,6 +24,7 @@ export class MemosView extends ItemView {
   activeDateFilter: string | null = null;
   memos: MemoNote[] = [];
   highlightedCardEl: HTMLElement | null = null;
+  showingMap = false;
 
   constructor(leaf: WorkspaceLeaf, plugin: MemosPlugin) {
     super(leaf);
@@ -112,6 +115,34 @@ export class MemosView extends ItemView {
 
     const toolbar = this.contentEl.createDiv("memos-toolbar");
     this.renderToolbar(toolbar);
+
+    if (this.showingMap) {
+      const mapContainer = this.contentEl.createDiv("memos-map-container");
+
+      // Back button
+      const backBtn = mapContainer.createDiv("memos-map-back-btn");
+      setIcon(backBtn, "arrow-left");
+      backBtn.createSpan({ text: ` ${i18n.back}` });
+      backBtn.addEventListener("click", () => {
+        this.showingMap = false;
+        void this.refresh();
+      });
+
+      const canvas = mapContainer.createEl("canvas");
+      const containerWidth = mapContainer.clientWidth || 380;
+
+      requestAnimationFrame(() => {
+        const actualWidth = mapContainer.clientWidth || containerWidth;
+        renderCognitiveMap(canvas, {
+          memos: this.memos,
+          enableSource: this.plugin.settings.enableSource,
+          width: actualWidth,
+          mapHeight: Math.round(actualWidth * 1.15),
+          pixelRatio: window.devicePixelRatio || 2,
+        });
+      });
+      return;
+    }
 
     // On mobile: stats + cards share a single scroll container so the
     // heatmap scrolls away while the toolbar stays pinned at the top.
@@ -260,6 +291,29 @@ export class MemosView extends ItemView {
       const filtered = this.getFilteredMemos();
       void exportToCanvas(this.app, filtered);
     });
+
+    if (this.memos.length > 0) {
+      const mapBtn = right.createDiv({
+        cls: `memos-toolbar-btn${this.showingMap ? " memos-map-btn-active" : ""}`,
+        attr: { "aria-label": i18n.cognitiveMapTooltip },
+      });
+      setIcon(mapBtn, "map");
+      mapBtn.addEventListener("click", () => {
+        this.showingMap = !this.showingMap;
+        void this.refresh();
+      });
+
+      if (this.showingMap) {
+        const exportBtn = right.createDiv({
+          cls: "memos-toolbar-btn",
+          attr: { "aria-label": i18n.exportMap },
+        });
+        setIcon(exportBtn, "share");
+        exportBtn.addEventListener("click", () => {
+          new CognitiveMapExportModal(this.app, this.plugin, this.memos).open();
+        });
+      }
+    }
   }
 
   renderCards(el: HTMLElement) {

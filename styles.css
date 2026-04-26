@@ -1310,3 +1310,49 @@
   height: var(--export-wrapper-height, auto);
   overflow: hidden;
 }
+
+/* =============================================================================
+   Cognitive Map
+   ============================================================================= */
+
+.memos-map-container {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  justify-content: center;
+  padding: 12px;
+}
+
+.memos-map-container canvas {
+  border-radius: 8px;
+  max-width: 100%;
+}
+
+.memos-map-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+  padding: 6px 12px;
+  margin-bottom: 8px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.memos-map-back-btn:hover {
+  background-color: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.memos-map-btn-active {
+  background-color: var(--interactive-accent) !important;
+  color: var(--text-on-accent) !important;
+}
+
+.memos-map-export-scaled {
+  width: var(--export-map-width);
+  height: auto;
+}

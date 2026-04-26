@@ -99,6 +99,17 @@ interface Messages {
 
   // ── Flomo import ──
   noMemosInHtml: string;
+
+  // ── Cognitive Map ──
+  cognitiveMap: string;
+  cognitiveMapTooltip: string;
+  mapStats: (n: number, tags: number, days: number) => string;
+  mapSource: string;
+  exportMap: string;
+  mapExported: string;
+  mapExportedTo: string;             // ${path}
+  mapCopied: string;
+  mapUncategorized: string;
 }
 
 const en: Messages = {
@@ -187,6 +198,15 @@ const en: Messages = {
   exportedToCanvas: "Exported ${count} memos to Canvas!",
 
   noMemosInHtml: "No memos found in the HTML file.",
+  cognitiveMap: "Cognitive Map",
+  cognitiveMapTooltip: "Cognitive map",
+  mapStats: (n, tags, days) => `${n} note${n !== 1 ? "s" : ""} · ${tags} topic${tags !== 1 ? "s" : ""} · ${days} day${days !== 1 ? "s" : ""}`,
+  mapSource: "Source",
+  exportMap: "Export map",
+  mapExported: "Map saved!",
+  mapExportedTo: "Map saved to ${path}",
+  mapCopied: "Map copied to clipboard!",
+  mapUncategorized: "Uncategorized",
 };
 
 const zh: Messages = {
@@ -275,6 +295,15 @@ const zh: Messages = {
   exportedToCanvas: "已导出 ${count} 条 memo 到 Canvas！",
 
   noMemosInHtml: "HTML 文件中未找到 memo。",
+  cognitiveMap: "认知地图",
+  cognitiveMapTooltip: "认知地图",
+  mapStats: (n, tags, days) => `${n} 笔记 · ${tags} 主题 · ${days} 天`,
+  mapSource: "来源",
+  exportMap: "导出地图",
+  mapExported: "地图已保存！",
+  mapExportedTo: "地图已保存到 ${path}",
+  mapCopied: "地图已复制到剪贴板！",
+  mapUncategorized: "未分类",
 };
 
 /** Helper: simple template string replacement. */
