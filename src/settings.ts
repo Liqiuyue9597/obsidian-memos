@@ -174,7 +174,7 @@ export class MemosSettingTab extends PluginSettingTab {
           .setButtonText(i18n.chooseHtmlFile)
           .setCta()
           .onClick(() => {
-            const input = document.createElement("input");
+            const input = createEl("input");
             input.type = "file";
             input.accept = ".html,.htm";
             input.addEventListener("change", () => {

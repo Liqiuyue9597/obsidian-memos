@@ -114,7 +114,7 @@ export default class MemosPlugin extends Plugin {
       const observer = new MutationObserver((mutations) => {
         for (const mutation of mutations) {
           for (const node of mutation.addedNodes) {
-            if (node instanceof HTMLElement) {
+            if (node.instanceOf(HTMLElement)) {
               const added = node.matches?.(".internal-embed")
                 ? [node]
                 : Array.from(node.querySelectorAll?.(".internal-embed") ?? []);
@@ -126,7 +126,7 @@ export default class MemosPlugin extends Plugin {
       observer.observe(el, { childList: true, subtree: true });
 
       // Disconnect after timeout to avoid leaks (embeds should be resolved by then)
-      setTimeout(() => observer.disconnect(), EMBED_RESOLVE_TIMEOUT_MS);
+      window.setTimeout(() => observer.disconnect(), EMBED_RESOLVE_TIMEOUT_MS);
     });
 
     this.app.workspace.onLayoutReady(() => {

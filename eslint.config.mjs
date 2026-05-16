@@ -13,6 +13,11 @@ export default defineConfig([
       globals: {
         ...globals.browser,
         ...globals.node,
+        // Obsidian injects these globals at runtime for popout window compatibility
+        activeDocument: "readonly",
+        createDiv: "readonly",
+        createSpan: "readonly",
+        createEl: "readonly",
       },
     },
     rules: {

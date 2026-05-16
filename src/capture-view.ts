@@ -34,7 +34,7 @@ export class NoteSuggestModal extends FuzzySuggestModal<TFile> {
   onClose(): void {
     // Called when modal is dismissed (Escape or click outside) without choosing
     // We use a short delay so onChooseItem fires first if the user made a selection
-    setTimeout(() => {
+    window.setTimeout(() => {
       this.onDismiss?.();
     }, 50);
   }
@@ -165,7 +165,7 @@ export class CaptureItemView extends ItemView {
       attr: { "aria-label": i18n.insertImage },
     });
     setIcon(imageBtn, "image");
-    this.imageInput = document.createElement("input");
+    this.imageInput = createEl("input");
     this.imageInput.type = "file";
     this.imageInput.accept = "image/*";
     this.imageInput.multiple = false;
@@ -215,7 +215,7 @@ export class CaptureItemView extends ItemView {
     });
 
     // Focus textarea after layout settles
-    setTimeout(() => this.textarea.focus(), 100);
+    window.setTimeout(() => this.textarea.focus(), 100);
   }
 
   async onClose() {
@@ -274,7 +274,7 @@ export class CaptureItemView extends ItemView {
       );
     if (!target) return;
 
-    const input = document.createElement("input");
+    const input = createEl("input");
     input.type = "text";
     input.className = "memos-capture-card-tag-input";
     input.placeholder = i18n.tagPlaceholder;
@@ -316,7 +316,7 @@ export class CaptureItemView extends ItemView {
   }
 
   /** Load tag suggestions from the memo folder and refresh the chip row. */
-  private async refreshTagSuggestions() {
+  private refreshTagSuggestions() {
     const loadToken = ++this.tagSuggestionLoadToken;
     const excludedTags =
       this.plugin.settings.useFixedTag && this.plugin.settings.fixedTag
@@ -324,7 +324,7 @@ export class CaptureItemView extends ItemView {
         : [];
 
     try {
-      const suggestions = await loadTagSuggestions(
+      const suggestions = loadTagSuggestions(
         this.app,
         this.plugin.settings.saveFolder,
         {

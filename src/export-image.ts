@@ -250,7 +250,7 @@ async function generateImage(
   }
 
   // --- Measure pass: determine card height ---
-  const measureCanvas = document.createElement("canvas");
+  const measureCanvas = createEl("canvas");
   measureCanvas.width = CARD_WIDTH * scale;
   measureCanvas.height = 1;
   const mCtx = measureCanvas.getContext("2d")!;
@@ -292,7 +292,7 @@ async function generateImage(
     PADDING_BOTTOM;
 
   // --- Draw pass ---
-  const canvas = document.createElement("canvas");
+  const canvas = createEl("canvas");
   canvas.width = CARD_WIDTH * scale;
   canvas.height = totalHeight * scale;
   const ctx = canvas.getContext("2d")!;
@@ -428,7 +428,7 @@ function renderExportContent(content: string, container: HTMLElement) {
   const re = new RegExp(INLINE_TAG_RE.source, INLINE_TAG_RE.flags);
 
   for (let i = 0; i < lines.length; i++) {
-    if (i > 0) container.appendChild(document.createElement("br"));
+    if (i > 0) container.appendChild(createEl("br"));
 
     const line = lines[i];
     let lastIndex = 0;
@@ -438,10 +438,10 @@ function renderExportContent(content: string, container: HTMLElement) {
     while ((match = re.exec(line)) !== null) {
       if (match.index > lastIndex) {
         container.appendChild(
-          document.createTextNode(line.slice(lastIndex, match.index))
+          activeDocument.createTextNode(line.slice(lastIndex, match.index))
         );
       }
-      const tagSpan = document.createElement("span");
+      const tagSpan = createSpan();
       tagSpan.className = "memos-export-inline-tag";
       tagSpan.textContent = `#${match[1]}`;
       container.appendChild(tagSpan);
@@ -450,7 +450,7 @@ function renderExportContent(content: string, container: HTMLElement) {
 
     if (lastIndex < line.length) {
       container.appendChild(
-        document.createTextNode(line.slice(lastIndex))
+        activeDocument.createTextNode(line.slice(lastIndex))
       );
     }
   }
@@ -466,12 +466,12 @@ export async function buildExportCard(
   memo: MemoNote,
   options: { authorName?: string; isDarkMode: boolean; showBranding: boolean }
 ): Promise<HTMLDivElement> {
-  const card = document.createElement("div");
+  const card = createDiv();
   card.className = "memos-export-card";
   if (options.isDarkMode) card.classList.add("memos-export-dark");
 
   // Content (text only, images stripped)
-  const contentDiv = document.createElement("div");
+  const contentDiv = createDiv();
   contentDiv.className = "memos-export-content";
   renderExportContent(stripImageEmbeds(memo.content), contentDiv);
   card.appendChild(contentDiv);
@@ -489,7 +489,7 @@ export async function buildExportCard(
       const arrayBuf = await app.vault.readBinary(imageFile);
       const blob = new Blob([arrayBuf]);
       const url = URL.createObjectURL(blob);
-      const imgEl = document.createElement("img");
+      const imgEl = createEl("img");
       imgEl.src = url;
       imgEl.className = "memos-export-preview-image";
       card.appendChild(imgEl);
@@ -499,15 +499,15 @@ export async function buildExportCard(
   }
 
   // Meta section
-  const meta = document.createElement("div");
+  const meta = createDiv();
   meta.className = "memos-export-meta";
 
   // Footer (time + optional author)
-  const footer = document.createElement("div");
+  const footer = createDiv();
   footer.className = "memos-export-footer";
 
   const d = new Date(memo.created);
-  const timeSpan = document.createElement("span");
+  const timeSpan = createSpan();
   timeSpan.className = "memos-export-time";
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, "0");
@@ -518,7 +518,7 @@ export async function buildExportCard(
   footer.appendChild(timeSpan);
 
   if (options.authorName) {
-    const authorSpan = document.createElement("span");
+    const authorSpan = createSpan();
     authorSpan.className = "memos-export-author";
     authorSpan.textContent = `\u2014 ${options.authorName}`;
     footer.appendChild(authorSpan);
@@ -530,13 +530,13 @@ export async function buildExportCard(
   if (options.showBranding) {
     if (options.authorName) {
       // Separate line below footer when author is shown
-      const branding = document.createElement("div");
+      const branding = createDiv();
       branding.className = "memos-export-branding";
       branding.textContent = BRANDING_TEXT;
       meta.appendChild(branding);
     } else {
       // Same line as time (inside footer row) when no author
-      const branding = document.createElement("span");
+      const branding = createSpan();
       branding.className = "memos-export-branding";
       branding.textContent = BRANDING_TEXT;
       footer.appendChild(branding);
@@ -568,7 +568,7 @@ export class ExportModal extends Modal {
     contentEl.addClass("memos-export-modal");
 
     // Determine dark mode
-    const isDarkMode = document.body.classList.contains("theme-dark");
+    const isDarkMode = activeDocument.body.classList.contains("theme-dark");
 
     // Build the export card preview (DOM-based, for visual preview only)
     const authorName = this.plugin.settings.showAuthorInExport
@@ -583,7 +583,7 @@ export class ExportModal extends Modal {
     cardWrapper.appendChild(cardEl);
 
     // After layout: scale card to fit container width if needed
-    setTimeout(() => {
+    window.setTimeout(() => {
       const containerWidth = previewContainer.clientWidth - 40; // minus padding
       const cardWidth = 440;
       if (containerWidth > 0 && containerWidth < cardWidth) {
@@ -642,12 +642,12 @@ export class ExportModal extends Modal {
       } else {
         // Desktop: trigger browser download via <a> element
         const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
+        const a = createEl("a");
         a.href = url;
         a.download = fname;
-        document.body.appendChild(a);
+        activeDocument.body.appendChild(a);
         a.click();
-        document.body.removeChild(a);
+        activeDocument.body.removeChild(a);
         URL.revokeObjectURL(url);
         new Notice(i18n.imageSaved);
       }

@@ -80,7 +80,7 @@ export function loadTagSuggestions(
   app: App,
   folderPath: string,
   options: TagSuggestionOptions = {}
-): Promise<string[]> {
+): string[] {
   const folder = normalizePath(folderPath);
   const abstractFolder = app.vault.getAbstractFileByPath(folder);
 

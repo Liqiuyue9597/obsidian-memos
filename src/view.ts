@@ -40,12 +40,12 @@ export class MemosView extends ItemView {
     return "sticky-note";
   }
 
-  private refreshTimer: ReturnType<typeof setTimeout> | null = null;
+  private refreshTimer: number | null = null;
 
   /** Debounced refresh — coalesces rapid vault events into a single refresh. */
   private debouncedRefresh() {
-    if (this.refreshTimer) clearTimeout(this.refreshTimer);
-    this.refreshTimer = setTimeout(() => {
+    if (this.refreshTimer) window.clearTimeout(this.refreshTimer);
+    this.refreshTimer = window.setTimeout(() => {
       this.refreshTimer = null;
       void this.refresh();
     }, 300);
@@ -100,7 +100,7 @@ export class MemosView extends ItemView {
   async onClose() {
     await Promise.resolve();
     if (this.refreshTimer) {
-      clearTimeout(this.refreshTimer);
+      window.clearTimeout(this.refreshTimer);
       this.refreshTimer = null;
     }
   }
