@@ -4,7 +4,7 @@ Flomo-style quick capture and card view for Obsidian. Jot down ideas in seconds,
 
 All data is stored as local Markdown files — your data, your rules.
 
-![Quick Memos screenshots](https://github.com/user-attachments/assets/6abc5200-3136-4bb4-bda5-8889ad3527f9)
+<img src="https://github.com/user-attachments/assets/6abc5200-3136-4bb4-bda5-8889ad3527f9" width="300" alt="Quick Memos screenshots" />
 
 **[中文文档](README.zh.md)**
 
