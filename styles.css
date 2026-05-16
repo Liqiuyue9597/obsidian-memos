@@ -243,16 +243,15 @@
 .memos-wikilink {
   color: var(--link-color);
   cursor: pointer;
-  text-decoration-line: underline;
-  text-decoration-style: dotted;
+  text-decoration: underline dotted;
   text-underline-offset: 2px;
   font-size: inherit;
-  transition: color 0.12s ease, text-decoration-style 0.12s ease;
+  transition: color 0.12s ease, text-decoration 0.12s ease;
 }
 
 .memos-wikilink:hover {
   color: var(--link-color-hover, var(--link-color));
-  text-decoration-style: solid;
+  text-decoration: underline solid;
 }
 
 /* =============================================================================
