@@ -219,8 +219,12 @@ export class CaptureItemView extends ItemView {
       }
     });
 
-    // Focus textarea after layout settles
-    window.setTimeout(() => this.textarea.focus(), 100);
+    // Focus textarea after layout settles, then make sure the virtual keyboard
+    // didn't push it outside the scrollable area.
+    window.setTimeout(() => {
+      this.textarea.focus();
+      this.textarea.scrollIntoView({ block: "nearest" });
+    }, 100);
   }
 
   async onClose() {

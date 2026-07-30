@@ -1748,7 +1748,10 @@ var CaptureItemView = class extends import_obsidian7.ItemView {
         void this.handleSave();
       }
     });
-    window.setTimeout(() => this.textarea.focus(), 100);
+    window.setTimeout(() => {
+      this.textarea.focus();
+      this.textarea.scrollIntoView({ block: "nearest" });
+    }, 100);
   }
   async onClose() {
     await Promise.resolve();
