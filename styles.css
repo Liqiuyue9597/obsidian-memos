@@ -249,10 +249,15 @@
 .memos-card-content h5,
 .memos-card-content h6 { font-size: 1em; }
 
+/* Beat Obsidian `.markdown-rendered ul` / `--list-indent` (~2em) so card
+   bullets sit closer to the paragraph left edge. */
+.memos-card-content.markdown-rendered ul,
+.memos-card-content.markdown-rendered ol,
 .memos-card-content ul,
 .memos-card-content ol {
   margin: 0.3em 0;
-  padding-left: 1.4em;
+  padding-left: 1em;
+  padding-inline-start: 1em;
 }
 
 .memos-card-content li {
