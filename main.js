@@ -36,7 +36,6 @@ var import_obsidian10 = require("obsidian");
 var VIEW_TYPE_MEMOS = "memos-view";
 var VIEW_TYPE_CAPTURE = "memos-capture-view";
 var INLINE_TAG_RE = /#([\w\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af/-]+)/g;
-var WIKILINK_RE = /\[\[([^\]|]+?)(?:\|([^\]]+?))?\]\]/g;
 
 // src/types.ts
 var DEFAULT_SETTINGS = {
@@ -962,14 +961,80 @@ async function exportToCanvas(app, memos, canvasName) {
   new import_obsidian4.Notice(t("exportedToCanvas", { count: memos.length }));
 }
 
+// src/mobile-layout.ts
+function computeMobileNavbarOverlap(containerRect, navbarRect) {
+  if (!navbarRect)
+    return 0;
+  return Math.max(0, containerRect.bottom - navbarRect.top);
+}
+function watchMobileNavbarOverlap(owner, options) {
+  const {
+    container,
+    workspace,
+    doc = container.ownerDocument,
+    navbarSelector = ".mobile-navbar"
+  } = options;
+  let frame = 0;
+  const measure = () => {
+    frame = 0;
+    const navbar = doc.querySelector(navbarSelector);
+    const containerRect = container.getBoundingClientRect();
+    const navbarRect = navbar ? navbar.getBoundingClientRect() : null;
+    const overlap = computeMobileNavbarOverlap(containerRect, navbarRect);
+    container.style.setProperty("--memos-mobile-navbar-overlap", `${overlap}px`);
+  };
+  const schedule = () => {
+    if (frame)
+      return;
+    const raf = typeof window.requestAnimationFrame === "function" ? window.requestAnimationFrame.bind(window) : (cb) => window.setTimeout(() => cb(0), 0);
+    frame = raf(() => {
+      measure();
+    });
+  };
+  schedule();
+  let observer = null;
+  if (typeof ResizeObserver !== "undefined") {
+    observer = new ResizeObserver(() => schedule());
+    observer.observe(container);
+    const navbar = doc.querySelector(navbarSelector);
+    if (navbar instanceof Element)
+      observer.observe(navbar);
+  }
+  const onResize = () => schedule();
+  if (typeof window.addEventListener === "function") {
+    window.addEventListener("resize", onResize);
+  }
+  if (workspace) {
+    owner.registerEvent(workspace.on("layout-change", () => schedule()));
+  }
+  owner.register(() => {
+    if (frame) {
+      if (typeof window.cancelAnimationFrame === "function") {
+        window.cancelAnimationFrame(frame);
+      } else {
+        window.clearTimeout(frame);
+      }
+      frame = 0;
+    }
+    observer == null ? void 0 : observer.disconnect();
+    if (typeof window.removeEventListener === "function") {
+      window.removeEventListener("resize", onResize);
+    }
+  });
+}
+
 // src/view.ts
-var _MemosView = class extends import_obsidian5.ItemView {
+var MemosView = class extends import_obsidian5.ItemView {
   constructor(leaf, plugin) {
     super(leaf);
     this.activeTag = null;
     this.activeDateFilter = null;
     this.memos = [];
     this.highlightedCardEl = null;
+    /** Owns MarkdownRenderer child components; replaced on each refresh. */
+    this.cardRenderComponent = null;
+    /** Guards async refresh steps against stale generations. */
+    this.renderGeneration = 0;
     this.refreshTimer = null;
     this.plugin = plugin;
   }
@@ -993,6 +1058,10 @@ var _MemosView = class extends import_obsidian5.ItemView {
   }
   async onOpen() {
     this.contentEl.addClass("memos-view");
+    watchMobileNavbarOverlap(this, {
+      container: this.contentEl,
+      workspace: this.app.workspace
+    });
     await this.refresh();
     const folderPrefix = (0, import_obsidian5.normalizePath)(this.plugin.settings.saveFolder) + "/";
     this.registerEvent(
@@ -1028,14 +1097,26 @@ var _MemosView = class extends import_obsidian5.ItemView {
       window.clearTimeout(this.refreshTimer);
       this.refreshTimer = null;
     }
+    this.disposeCardRenderComponent();
+  }
+  /** Tear down MarkdownRenderer child components from the previous refresh. */
+  disposeCardRenderComponent() {
+    if (this.cardRenderComponent) {
+      this.removeChild(this.cardRenderComponent);
+      this.cardRenderComponent = null;
+    }
   }
   async refresh() {
     await this.loadMemos();
+    this.disposeCardRenderComponent();
     this.contentEl.empty();
     this.highlightedCardEl = null;
-    const toolbar = this.contentEl.createDiv("memos-toolbar");
-    this.renderToolbar(toolbar);
+    const generation = ++this.renderGeneration;
+    this.cardRenderComponent = new import_obsidian5.Component();
+    this.addChild(this.cardRenderComponent);
     const isMobile = this.contentEl.closest(".is-mobile") !== null;
+    const toolbar = this.contentEl.createDiv("memos-toolbar");
+    this.renderToolbar(toolbar, isMobile);
     if (isMobile) {
       const scrollContainer = this.contentEl.createDiv("memos-cards-container");
       const statsContainer = scrollContainer.createDiv();
@@ -1044,7 +1125,10 @@ var _MemosView = class extends import_obsidian5.ItemView {
         onToggle: () => this.handleStatsToggle(),
         onDateClick: (date) => this.handleDateFilter(date)
       });
-      this.renderCards(scrollContainer);
+      await this.renderCards(scrollContainer, generation);
+      if (generation !== this.renderGeneration)
+        return;
+      this.renderMobileCaptureTrigger();
     } else {
       const statsContainer = this.contentEl.createDiv();
       const stats = computeStats(this.memos);
@@ -1053,8 +1137,35 @@ var _MemosView = class extends import_obsidian5.ItemView {
         onDateClick: (date) => this.handleDateFilter(date)
       });
       const cardsContainer = this.contentEl.createDiv("memos-cards-container");
-      this.renderCards(cardsContainer);
+      await this.renderCards(cardsContainer, generation);
     }
+  }
+  /** Content-area bottom capture trigger — above Obsidian's system navbar. */
+  renderMobileCaptureTrigger() {
+    const trigger = this.contentEl.createDiv({
+      cls: "memos-mobile-capture-trigger",
+      attr: {
+        role: "button",
+        tabindex: "0",
+        "aria-label": i18n.newMemo
+      }
+    });
+    trigger.createSpan({
+      cls: "memos-mobile-capture-placeholder",
+      text: i18n.whatsOnYourMind
+    });
+    const btn = trigger.createDiv("memos-mobile-capture-btn");
+    (0, import_obsidian5.setIcon)(btn, "pencil");
+    const openCapture = () => {
+      void this.plugin.activateCaptureView();
+    };
+    trigger.addEventListener("click", openCapture);
+    trigger.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        openCapture();
+      }
+    });
   }
   async loadMemos() {
     const folder = (0, import_obsidian5.normalizePath)(this.plugin.settings.saveFolder);
@@ -1089,7 +1200,7 @@ var _MemosView = class extends import_obsidian5.ItemView {
     const source = typeof fm["source"] === "string" ? fm["source"].replace(/^"|"$/g, "") : "";
     return { file, content: body, tags, created, dateLabel, mood, source };
   }
-  renderToolbar(el) {
+  renderToolbar(el, isMobile) {
     const left = el.createDiv("memos-toolbar-left");
     const count = this.memos.filter(
       (m) => (!this.activeTag || m.tags.includes(this.activeTag)) && (!this.activeDateFilter || m.dateLabel === this.activeDateFilter)
@@ -1117,14 +1228,16 @@ var _MemosView = class extends import_obsidian5.ItemView {
       });
     }
     const right = el.createDiv("memos-toolbar-right");
-    const captureBtn = right.createDiv({
-      cls: "memos-toolbar-btn",
-      attr: { "aria-label": i18n.newMemo }
-    });
-    (0, import_obsidian5.setIcon)(captureBtn, "pencil");
-    captureBtn.addEventListener("click", () => {
-      void this.plugin.activateCaptureView();
-    });
+    if (!isMobile) {
+      const captureBtn = right.createDiv({
+        cls: "memos-toolbar-btn",
+        attr: { "aria-label": i18n.newMemo }
+      });
+      (0, import_obsidian5.setIcon)(captureBtn, "pencil");
+      captureBtn.addEventListener("click", () => {
+        void this.plugin.activateCaptureView();
+      });
+    }
     const randomBtn = right.createDiv({
       cls: "memos-toolbar-btn",
       attr: { "aria-label": i18n.randomReview }
@@ -1143,7 +1256,7 @@ var _MemosView = class extends import_obsidian5.ItemView {
       void exportToCanvas(this.app, filtered);
     });
   }
-  renderCards(el) {
+  async renderCards(el, generation) {
     var _a;
     const filtered = this.getFilteredMemos();
     if (filtered.length === 0) {
@@ -1157,19 +1270,33 @@ var _MemosView = class extends import_obsidian5.ItemView {
       g.push(memo);
       groups.set(memo.dateLabel, g);
     }
+    const pending = [];
     for (const [date, memos] of groups) {
       const group = el.createDiv("memos-date-group");
       group.createDiv({ cls: "memos-date-header", text: date });
       for (const memo of memos) {
-        this.renderCard(memo, group);
+        pending.push(this.renderCard(memo, group, generation));
       }
     }
+    await Promise.all(pending);
   }
-  renderCard(memo, el) {
+  async renderCard(memo, el, generation) {
+    var _a;
     const card = el.createDiv("memos-card");
     card.dataset["path"] = memo.file.path;
-    const contentDiv = card.createDiv("memos-card-content");
-    this.renderContentDOM(memo.content, contentDiv);
+    const contentDiv = card.createDiv("memos-card-content markdown-rendered");
+    const renderParent = (_a = this.cardRenderComponent) != null ? _a : this;
+    await import_obsidian5.MarkdownRenderer.render(
+      this.app,
+      memo.content,
+      contentDiv,
+      memo.file.path,
+      renderParent
+    );
+    if (generation !== this.renderGeneration)
+      return;
+    this.normalizeCardEmbeds(contentDiv);
+    this.wireCardInteractions(contentDiv, memo.file.path);
     const footer = card.createDiv("memos-card-footer");
     if (memo.tags.length > 0) {
       const tagsEl = footer.createDiv("memos-card-tags");
@@ -1206,105 +1333,91 @@ var _MemosView = class extends import_obsidian5.ItemView {
       this.openMemo(memo.file);
     });
   }
-  /** Build card content using safe DOM operations instead of innerHTML. */
-  renderContentDOM(content, container) {
-    const lines = content.split("\n");
-    for (let i = 0; i < lines.length; i++) {
-      if (i > 0)
-        container.createEl("br");
-      const line = lines[i];
-      const embedRe = new RegExp(_MemosView.EMBED_RE.source, _MemosView.EMBED_RE.flags);
-      let lastIdx = 0;
-      let embedMatch;
-      while ((embedMatch = embedRe.exec(line)) !== null) {
-        if (embedMatch.index > lastIdx) {
-          this.renderTextSegment(line.slice(lastIdx, embedMatch.index), container);
+  /**
+   * Keep image embeds; restore unresolved images and non-image markdown
+   * embeds as plain text so cards don't recursively expand notes.
+   */
+  normalizeCardEmbeds(container) {
+    const doc = container.ownerDocument;
+    const embeds = container.querySelectorAll(".internal-embed, .media-embed, .markdown-embed");
+    embeds.forEach((embed) => {
+      var _a, _b;
+      if (!embed.instanceOf(HTMLElement))
+        return;
+      const hasImg = !!embed.querySelector("img");
+      const isImage = hasImg || embed.classList.contains("image-embed") || embed.classList.contains("media-embed");
+      if (isImage && hasImg)
+        return;
+      const src = (_a = embed.getAttribute("src")) != null ? _a : "";
+      const text = src ? `![[${src}]]` : (_b = embed.textContent) != null ? _b : "";
+      embed.replaceWith(doc.createTextNode(text));
+    });
+  }
+  /**
+   * Wire interactions that MarkdownRenderer doesn't enable in custom ItemViews:
+   * tag filter clicks, internal-link navigation / hover, and stopPropagation so
+   * interactive elements don't also open the memo file.
+   */
+  wireCardInteractions(container, sourcePath) {
+    container.addEventListener("click", (e) => {
+      var _a, _b;
+      const target = e.target;
+      if (!(target instanceof Element) || !target.instanceOf(HTMLElement))
+        return;
+      const tagEl = target.closest("a.tag");
+      if (tagEl instanceof Element && tagEl.instanceOf(HTMLElement)) {
+        e.preventDefault();
+        e.stopPropagation();
+        const href = (_a = tagEl.getAttribute("href")) != null ? _a : "";
+        let tag = href.replace(/^#/, "");
+        try {
+          tag = decodeURIComponent(tag);
+        } catch (e2) {
         }
-        const embedName = embedMatch[1];
-        this.renderEmbed(embedName, container);
-        lastIdx = embedRe.lastIndex;
+        if (!tag) {
+          tag = ((_b = tagEl.textContent) != null ? _b : "").replace(/^#/, "").trim();
+        }
+        if (tag)
+          this.handleTagClick(tag);
+        return;
       }
-      if (lastIdx < line.length) {
-        this.renderTextSegment(line.slice(lastIdx), container);
+      const linkEl = target.closest("a.internal-link");
+      if (linkEl instanceof Element && linkEl.instanceOf(HTMLElement)) {
+        e.preventDefault();
+        e.stopPropagation();
+        const linktext = linkEl.getAttribute("data-href") || linkEl.getAttribute("href");
+        if (linktext) {
+          void this.app.workspace.openLinkText(
+            linktext,
+            sourcePath,
+            import_obsidian5.Keymap.isModEvent(e)
+          );
+        }
+        return;
       }
-    }
-  }
-  /** Render a text segment with inline #tag and [[wikilink]] support. */
-  renderTextSegment(text, container) {
-    const tagRe = new RegExp(INLINE_TAG_RE.source, INLINE_TAG_RE.flags);
-    const linkRe = new RegExp(WIKILINK_RE.source, WIKILINK_RE.flags);
-    const matches = [];
-    let m;
-    while ((m = tagRe.exec(text)) !== null) {
-      matches.push({ index: m.index, length: m[0].length, type: "tag", tagName: m[1] });
-    }
-    while ((m = linkRe.exec(text)) !== null) {
-      matches.push({ index: m.index, length: m[0].length, type: "link", linkPath: m[1], linkAlias: m[2] });
-    }
-    matches.sort((a, b) => a.index - b.index);
-    let lastIndex = 0;
-    for (const match of matches) {
-      if (match.index < lastIndex)
-        continue;
-      if (match.index > lastIndex) {
-        container.appendText(text.slice(lastIndex, match.index));
-      }
-      if (match.type === "tag" && match.tagName) {
-        const tagSpan = container.createSpan({ cls: "memos-inline-tag", text: `#${match.tagName}` });
-        tagSpan.dataset["tag"] = match.tagName;
-        tagSpan.addEventListener("click", (e) => {
-          e.stopPropagation();
-          this.handleTagClick(match.tagName);
-        });
-      } else if (match.type === "link" && match.linkPath) {
-        const displayText = match.linkAlias || match.linkPath;
-        const linkSpan = container.createSpan({ cls: "memos-wikilink", text: displayText });
-        linkSpan.dataset["href"] = match.linkPath;
-        linkSpan.addEventListener("click", (e) => {
-          e.stopPropagation();
-          void this.app.workspace.openLinkText(match.linkPath, "", false);
-        });
-        linkSpan.addEventListener("mouseover", (e) => {
-          this.app.workspace.trigger("hover-link", {
-            event: e,
-            source: VIEW_TYPE_MEMOS,
-            hoverParent: this,
-            targetEl: linkSpan,
-            linktext: match.linkPath,
-            sourcePath: ""
-          });
-        });
-      }
-      lastIndex = match.index + match.length;
-    }
-    if (lastIndex < text.length) {
-      container.appendText(text.slice(lastIndex));
-    }
-  }
-  /** Render a ![[embed]] — show image if it's an image file, otherwise plain text. */
-  renderEmbed(name, container) {
-    var _a, _b;
-    const ext = (_b = (_a = name.split(".").pop()) == null ? void 0 : _a.toLowerCase()) != null ? _b : "";
-    if (!_MemosView.IMAGE_EXTENSIONS.includes(ext)) {
-      container.appendText(`![[${name}]]`);
-      return;
-    }
-    const file = this.app.metadataCache.getFirstLinkpathDest(name, "");
-    if (!file) {
-      container.appendText(`![[${name}]]`);
-      return;
-    }
-    const resourcePath = this.app.vault.getResourcePath(file);
-    const img = container.createEl("img", {
-      cls: "memos-card-image",
-      attr: {
-        src: resourcePath,
-        alt: name,
-        loading: "lazy"
+      if (target.closest("a, img, button, input, .internal-embed, .media-embed")) {
+        e.stopPropagation();
       }
     });
-    img.addEventListener("click", (e) => {
-      e.stopPropagation();
+    container.addEventListener("mouseover", (event) => {
+      const mouseEvent = event;
+      const target = mouseEvent.target;
+      if (!(target instanceof Element) || !target.instanceOf(HTMLElement))
+        return;
+      const linkEl = target.closest("a.internal-link");
+      if (!(linkEl instanceof Element) || !linkEl.instanceOf(HTMLElement))
+        return;
+      const linktext = linkEl.getAttribute("data-href") || linkEl.getAttribute("href");
+      if (!linktext)
+        return;
+      this.app.workspace.trigger("hover-link", {
+        event: mouseEvent,
+        source: VIEW_TYPE_MEMOS,
+        hoverParent: this,
+        targetEl: linkEl,
+        linktext,
+        sourcePath
+      });
     });
   }
   handleTagClick(tag) {
@@ -1367,9 +1480,6 @@ var _MemosView = class extends import_obsidian5.ItemView {
     }
   }
 };
-var MemosView = _MemosView;
-MemosView.IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "gif", "webp", "svg"];
-MemosView.EMBED_RE = /!\[\[(.+?)\]\]/g;
 
 // src/capture-view.ts
 var import_obsidian7 = require("obsidian");
@@ -1529,6 +1639,10 @@ var CaptureItemView = class extends import_obsidian7.ItemView {
     const container = this.contentEl;
     container.empty();
     container.addClass("memos-capture-card-container");
+    watchMobileNavbarOverlap(this, {
+      container,
+      workspace: this.app.workspace
+    });
     const closeBtn = container.createEl("button", {
       cls: "memos-capture-close clickable-icon",
       attr: { "aria-label": i18n.back }
@@ -2093,6 +2207,10 @@ var MemosPlugin = class extends import_obsidian10.Plugin {
     await this.loadSettings();
     this.registerView(VIEW_TYPE_MEMOS, (leaf) => new MemosView(leaf, this));
     this.registerView(VIEW_TYPE_CAPTURE, (leaf) => new CaptureItemView(leaf, this));
+    this.registerHoverLinkSource(VIEW_TYPE_MEMOS, {
+      display: "Quick Memos",
+      defaultMod: false
+    });
     (0, import_obsidian10.addIcon)("quick-memos", `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="14" width="50" height="68" rx="6"/><line x1="20" y1="34" x2="44" y2="34"/><line x1="20" y1="46" x2="38" y2="46"/><line x1="20" y1="58" x2="42" y2="58"/><rect x="70" y="14" width="14" height="52" rx="3"/><path d="M70 66l7 14 7-14" fill="currentColor"/><line x1="70" y1="24" x2="84" y2="24" stroke-width="4"/></svg>`);
     this.addRibbonIcon("quick-memos", i18n.openMemosView, () => {
       void this.activateView();

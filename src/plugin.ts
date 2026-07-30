@@ -23,6 +23,12 @@ export default class MemosPlugin extends Plugin {
     this.registerView(VIEW_TYPE_MEMOS, (leaf) => new MemosView(leaf, this));
     this.registerView(VIEW_TYPE_CAPTURE, (leaf) => new CaptureItemView(leaf, this));
 
+    // Allow Page preview to recognize hover-link events from the card view
+    this.registerHoverLinkSource(VIEW_TYPE_MEMOS, {
+      display: "Quick Memos",
+      defaultMod: false,
+    });
+
     // Ribbon icon → open Memos view (fullscreen on mobile)
     addIcon("quick-memos", `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="14" width="50" height="68" rx="6"/><line x1="20" y1="34" x2="44" y2="34"/><line x1="20" y1="46" x2="38" y2="46"/><line x1="20" y1="58" x2="42" y2="58"/><rect x="70" y="14" width="14" height="52" rx="3"/><path d="M70 66l7 14 7-14" fill="currentColor"/><line x1="70" y1="24" x2="84" y2="24" stroke-width="4"/></svg>`);
     this.addRibbonIcon("quick-memos", i18n.openMemosView, () => {

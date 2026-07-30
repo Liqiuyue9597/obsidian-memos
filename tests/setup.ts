@@ -26,7 +26,24 @@ if (typeof globalThis.window === "undefined") {
   body: { classList: { contains: () => false }, appendChild: () => {}, removeChild: () => {} },
   createTextNode: (text: string) => ({ textContent: text }),
   createElement: (tag: string) => ({ tagName: tag }),
+  querySelector: () => null,
 };
+
+// Minimal window DOM APIs used by mobile-layout helpers in Node tests
+const win = globalThis.window as any;
+if (typeof win.addEventListener !== "function") {
+  win.addEventListener = () => {};
+}
+if (typeof win.removeEventListener !== "function") {
+  win.removeEventListener = () => {};
+}
+if (typeof win.requestAnimationFrame !== "function") {
+  win.requestAnimationFrame = (cb: FrameRequestCallback) =>
+    win.setTimeout(() => cb(0), 0) as unknown as number;
+}
+if (typeof win.cancelAnimationFrame !== "function") {
+  win.cancelAnimationFrame = (id: number) => win.clearTimeout(id);
+}
 
 // Obsidian DOM helper globals
 (globalThis as any).createDiv = (cls?: string) => {

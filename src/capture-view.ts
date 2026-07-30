@@ -6,6 +6,7 @@ import { loadTagSuggestions } from "./tag-suggestions";
 import { saveImageAttachment } from "./image-attachment";
 import type MemosPlugin from "./plugin";
 import { i18n, t } from "./i18n";
+import { watchMobileNavbarOverlap } from "./mobile-layout";
 
 /** Modal that lets the user pick a note to insert as [[wikilink]]. */
 export class NoteSuggestModal extends FuzzySuggestModal<TFile> {
@@ -82,6 +83,10 @@ export class CaptureItemView extends ItemView {
     const container = this.contentEl;
     container.empty();
     container.addClass("memos-capture-card-container");
+    watchMobileNavbarOverlap(this, {
+      container,
+      workspace: this.app.workspace,
+    });
 
     // ── Close button (top-left floating circle) ──
     const closeBtn = container.createEl("button", {

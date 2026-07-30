@@ -20,6 +20,7 @@
   height: 100%;
   background-color: var(--background-primary);
   overflow: hidden;
+  position: relative;
 }
 
 /* =============================================================================
@@ -219,6 +220,92 @@
   color: var(--text-normal);
   word-break: break-word;
   margin-bottom: 8px;
+}
+
+/* Compact markdown typography inside cards */
+.memos-card-content p {
+  margin: 0 0 0.5em;
+}
+
+.memos-card-content p:last-child {
+  margin-bottom: 0;
+}
+
+.memos-card-content h1,
+.memos-card-content h2,
+.memos-card-content h3,
+.memos-card-content h4,
+.memos-card-content h5,
+.memos-card-content h6 {
+  margin: 0.45em 0 0.3em;
+  line-height: 1.3;
+  font-weight: 600;
+}
+
+.memos-card-content h1 { font-size: 1.25em; }
+.memos-card-content h2 { font-size: 1.15em; }
+.memos-card-content h3 { font-size: 1.08em; }
+.memos-card-content h4,
+.memos-card-content h5,
+.memos-card-content h6 { font-size: 1em; }
+
+.memos-card-content ul,
+.memos-card-content ol {
+  margin: 0.3em 0;
+  padding-left: 1.4em;
+}
+
+.memos-card-content li {
+  margin: 0.15em 0;
+}
+
+.memos-card-content blockquote {
+  margin: 0.4em 0;
+  padding-left: 0.8em;
+  border-left: 3px solid var(--background-modifier-border);
+  color: var(--text-muted);
+}
+
+.memos-card-content pre {
+  margin: 0.4em 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 0.9em;
+}
+
+.memos-card-content code {
+  font-size: 0.9em;
+}
+
+.memos-card-content img,
+.memos-card-content .internal-embed img,
+.memos-card-content .image-embed img {
+  max-width: 100%;
+  border-radius: 6px;
+  margin: 6px 0;
+  display: block;
+}
+
+.memos-card-content a.tag {
+  color: var(--text-muted);
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 13px;
+  text-decoration: none;
+  border-radius: 3px;
+  padding: 0 1px;
+}
+
+.memos-card-content a.tag:hover {
+  color: var(--text-normal);
+  text-decoration: underline;
+}
+
+.memos-card-content a.internal-link {
+  color: var(--link-color);
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
 }
 
 .memos-inline-tag {
@@ -727,19 +814,24 @@
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
 }
 
-/* Mobile: wider card, close button flows with content */
+/* Mobile: bottom-aligned capture, larger input, above system navbar */
 .is-mobile .memos-capture-card {
   max-width: 100%;
-  border-radius: 14px;
+  border-radius: 16px 16px 0 0;
   flex-shrink: 0;
+  margin-top: auto;
 }
 
 .is-mobile .memos-capture-card-container {
-  padding: 16px 10px;
+  padding: 12px 10px 0;
+  padding-bottom: max(
+    12px,
+    var(--memos-mobile-navbar-overlap, 0px),
+    var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))
+  );
   flex-direction: column;
   align-items: stretch;
-  justify-content: flex-start;
-  /* Prevent keyboard from compressing the card content */
+  justify-content: flex-end;
   height: auto;
   min-height: 100%;
 }
@@ -748,18 +840,117 @@
   position: relative;
   top: auto;
   left: auto;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
   align-self: flex-start;
   flex-shrink: 0;
+  width: 40px;
+  height: 40px;
 }
 
 .is-mobile .memos-capture-card-textarea-wrap {
   flex-shrink: 0;
+  padding: 20px 18px 12px;
 }
 
 .is-mobile .memos-capture-card-textarea {
-  min-height: 180px;
+  min-height: min(42vh, 320px);
   height: auto;
+  font-size: 16px; /* avoid iOS zoom on focus */
+  line-height: 1.6;
+}
+
+.is-mobile .memos-capture-card-save {
+  min-height: 48px;
+  padding: 12px 28px;
+  font-size: 16px;
+  border-radius: 12px;
+}
+
+.is-mobile .memos-capture-card-foot-btn {
+  width: 44px;
+  height: 44px;
+}
+
+.is-mobile .memos-capture-card-footer {
+  padding: 12px 16px 18px;
+}
+
+/* =============================================================================
+   Mobile capture trigger (content-area bottom, above system navbar)
+   ============================================================================= */
+
+.memos-mobile-capture-trigger {
+  display: none;
+}
+
+.is-mobile .memos-mobile-capture-trigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: max(
+    10px,
+    var(--memos-mobile-navbar-overlap, 0px),
+    var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))
+  );
+  height: 48px;
+  min-height: 48px;
+  padding: 0 8px 0 16px;
+  border-radius: 14px;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.12),
+    0 1px 3px rgba(0, 0, 0, 0.06);
+  cursor: pointer;
+  z-index: 4;
+}
+
+.theme-dark .is-mobile .memos-mobile-capture-trigger {
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.4),
+    0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+.is-mobile .memos-mobile-capture-placeholder {
+  flex: 1;
+  font-size: 14px;
+  color: var(--text-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+.is-mobile .memos-mobile-capture-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+.is-mobile .memos-mobile-capture-btn svg {
+  width: 17px;
+  height: 17px;
+}
+
+.is-mobile .memos-cards-container {
+  /* Leave room so the capture trigger doesn't cover the last card */
+  padding-bottom: calc(
+    48px + 20px + max(
+      10px,
+      var(--memos-mobile-navbar-overlap, 0px),
+      var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))
+    )
+  );
 }
 
 /* =============================================================================

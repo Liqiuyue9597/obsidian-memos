@@ -43,39 +43,210 @@ export class Events {
 
 export class Component {
   _registeredEvents: EventRef[] = [];
+  _children: Component[] = [];
+  _cleanups: Array<() => void> = [];
+  _loaded = false;
+
+  load() {
+    this._loaded = true;
+    for (const child of this._children) child.load();
+  }
+
+  unload() {
+    for (const child of [...this._children]) {
+      child.unload();
+    }
+    this._children = [];
+    for (const cleanup of this._cleanups.splice(0)) {
+      cleanup();
+    }
+    this._loaded = false;
+  }
+
+  addChild<T extends Component>(component: T): T {
+    this._children.push(component);
+    if (this._loaded) component.load();
+    return component;
+  }
+
+  removeChild<T extends Component>(component: T): T {
+    const idx = this._children.indexOf(component);
+    if (idx !== -1) this._children.splice(idx, 1);
+    component.unload();
+    return component;
+  }
+
+  register(cb: () => unknown) {
+    this._cleanups.push(cb);
+  }
 
   registerEvent(ref: EventRef) {
     this._registeredEvents.push(ref);
+  }
+
+  registerDomEvent(
+    el: { addEventListener: Function; removeEventListener?: Function },
+    type: string,
+    callback: EventListener,
+    options?: boolean | AddEventListenerOptions
+  ) {
+    el.addEventListener(type, callback, options);
+    this._cleanups.push(() => {
+      el.removeEventListener?.(type, callback, options);
+    });
+  }
+}
+
+function createStubEl(tag = "div"): any {
+  const children: any[] = [];
+  const listeners = new Map<string, Function[]>();
+  const classList = new Set<string>();
+  const attrs: Record<string, string> = {};
+  const style: Record<string, string> & { setProperty: (k: string, v: string) => void } = {
+    setProperty(k: string, v: string) {
+      style[k] = v;
+    },
+  } as any;
+  const dataset: Record<string, string> = {};
+
+  const el: any = {
+    tagName: tag.toUpperCase(),
+    children,
+    dataset,
+    style,
+    textContent: "",
+    className: "",
+    classList: {
+      add: (...cls: string[]) => {
+        for (const c of cls) classList.add(c);
+        el.className = [...classList].join(" ");
+      },
+      remove: (...cls: string[]) => {
+        for (const c of cls) classList.delete(c);
+        el.className = [...classList].join(" ");
+      },
+      contains: (cls: string) => classList.has(cls),
+    },
+    addClass: (cls: string) => {
+      classList.add(cls);
+      el.className = [...classList].join(" ");
+      return el;
+    },
+    removeClass: (cls: string) => {
+      classList.delete(cls);
+      el.className = [...classList].join(" ");
+      return el;
+    },
+    empty: () => {
+      children.length = 0;
+      el.textContent = "";
+      return el;
+    },
+    createDiv: (clsOrOpts?: string | { cls?: string; text?: string; attr?: Record<string, string> }) => {
+      const child = createStubEl("div");
+      applyCreateOpts(child, clsOrOpts);
+      children.push(child);
+      return child;
+    },
+    createEl: (
+      tagName: string,
+      opts?: string | { cls?: string; text?: string; attr?: Record<string, string> }
+    ) => {
+      const child = createStubEl(tagName);
+      applyCreateOpts(child, opts);
+      children.push(child);
+      return child;
+    },
+    createSpan: (clsOrOpts?: string | { cls?: string; text?: string; attr?: Record<string, string> }) => {
+      const child = createStubEl("span");
+      applyCreateOpts(child, clsOrOpts);
+      children.push(child);
+      return child;
+    },
+    appendChild: (child: any) => {
+      children.push(child);
+      return child;
+    },
+    appendText: (text: string) => {
+      el.textContent += text;
+      return el;
+    },
+    setText: (text: string) => {
+      el.textContent = text;
+      return el;
+    },
+    setAttribute: (name: string, value: string) => {
+      attrs[name] = value;
+      if (name.startsWith("data-")) {
+        dataset[name.slice(5).replace(/-([a-z])/g, (_, c) => c.toUpperCase())] = value;
+      }
+    },
+    getAttribute: (name: string) => attrs[name] ?? null,
+    closest: (_sel: string) => null,
+    querySelector: (_sel: string) => null,
+    querySelectorAll: (_sel: string) => [],
+    matches: (_sel: string) => false,
+    addEventListener: (type: string, cb: Function) => {
+      const list = listeners.get(type) ?? [];
+      list.push(cb);
+      listeners.set(type, list);
+    },
+    removeEventListener: (type: string, cb: Function) => {
+      const list = listeners.get(type);
+      if (!list) return;
+      const idx = list.indexOf(cb);
+      if (idx !== -1) list.splice(idx, 1);
+    },
+    setCssProps: (props: Record<string, string>) => {
+      Object.assign(style, props);
+    },
+    getBoundingClientRect: () => ({
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      width: 0,
+      height: 0,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    }),
+    ownerDocument: typeof document !== "undefined" ? document : { querySelector: () => null },
+    _listeners: listeners,
+    _attrs: attrs,
+  };
+  return el;
+}
+
+function applyCreateOpts(
+  el: any,
+  opts?: string | { cls?: string; text?: string; attr?: Record<string, string> }
+) {
+  if (typeof opts === "string") {
+    el.addClass(opts);
+    return;
+  }
+  if (!opts) return;
+  if (opts.cls) el.addClass(opts.cls);
+  if (opts.text) el.setText(opts.text);
+  if (opts.attr) {
+    for (const [k, v] of Object.entries(opts.attr)) {
+      el.setAttribute(k, v);
+    }
   }
 }
 
 export class ItemView extends Component {
   app: App;
   leaf: WorkspaceLeaf;
-
-  contentEl: Record<string, Function> & { closest: Function; empty: Function; addClass: Function; createDiv: Function; createEl: Function; createSpan: Function; querySelector: Function; appendText: Function; appendChild: Function };
+  contentEl: any;
 
   constructor(leaf: WorkspaceLeaf) {
     super();
     this.leaf = leaf;
     this.app = leaf.app ?? ({} as App);
-
-    // Stub DOM element with no-op methods that return themselves for chaining
-    const stubEl: any = {
-      addClass: () => stubEl,
-      empty: () => stubEl,
-      createDiv: () => stubEl,
-      createEl: () => stubEl,
-      createSpan: () => stubEl,
-      closest: () => null,
-      querySelector: () => null,
-      appendText: () => stubEl,
-      appendChild: () => stubEl,
-      setText: () => stubEl,
-      addEventListener: () => {},
-      dataset: {},
-    };
-    this.contentEl = stubEl;
+    this.contentEl = createStubEl("div");
+    this.load();
   }
 
   getViewType(): string {
@@ -134,6 +305,8 @@ export class WorkspaceLeaf {
 // ---------------------------------------------------------------------------
 
 export class Workspace extends Events {
+  _hoverLinkSources: Array<{ id: string; info: { display: string; defaultMod: boolean } }> = [];
+
   getLeavesOfType(_type: string): WorkspaceLeaf[] {
     return [];
   }
@@ -153,6 +326,10 @@ export class Workspace extends Events {
   }
 
   onLayoutReady(_cb: () => void) {}
+
+  registerHoverLinkSource(id: string, info: { display: string; defaultMod: boolean }) {
+    this._hoverLinkSources.push({ id, info });
+  }
 }
 
 export class Vault extends Events {
@@ -224,7 +401,7 @@ export class App {
 }
 
 // ---------------------------------------------------------------------------
-// UI stubs (unchanged from original)
+// UI stubs
 // ---------------------------------------------------------------------------
 
 export class Modal {
@@ -257,6 +434,41 @@ export class Platform {
   static isMobile = false;
 }
 
+export class Keymap {
+  static isModEvent(_evt?: MouseEvent | KeyboardEvent | null): boolean {
+    return false;
+  }
+}
+
+export class MarkdownRenderer {
+  static _calls: Array<{
+    app: App;
+    markdown: string;
+    el: any;
+    sourcePath: string;
+    component: Component;
+  }> = [];
+
+  static async render(
+    app: App,
+    markdown: string,
+    el: any,
+    sourcePath: string,
+    component: Component
+  ): Promise<void> {
+    this._calls.push({ app, markdown, el, sourcePath, component });
+    if (typeof el.appendText === "function") {
+      el.appendText(markdown);
+    } else if (typeof el.createEl === "function") {
+      el.createEl("p", { text: markdown });
+    }
+  }
+
+  static reset() {
+    this._calls = [];
+  }
+}
+
 export class Plugin extends Component {
   app: App;
   constructor(app?: App) {
@@ -275,6 +487,9 @@ export class Plugin extends Component {
   addSettingTab(_tab: any) {}
   registerObsidianProtocolHandler(_action: string, _handler: (params: any) => void) {}
   registerMarkdownPostProcessor(_processor: any) {}
+  registerHoverLinkSource(id: string, info: { display: string; defaultMod: boolean }) {
+    this.app.workspace.registerHoverLinkSource(id, info);
+  }
 }
 
 // ---------------------------------------------------------------------------
